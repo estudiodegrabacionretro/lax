@@ -3,121 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LA X - ATOMIC</title>
+    <title>DIAGNÓSTICO LA X</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
-        #map { height: 100%; width: 100%; background: #111; z-index: 1; }
-        
-        .search-bar { position: absolute; top: 10px; left: 5%; width: 90%; z-index: 1000; }
-        #addr-search { width: 100%; padding: 15px; border-radius: 12px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-size: 16px; outline: none; }
-        
-        .btn-x { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: 75px; height: 75px; border-radius: 50%; background: #0f172a; color: white; border: 3px solid #3b82f6; font-size: 2rem; z-index: 1000; font-weight: bold; }
-        
-        .user-loc { width: 12px; height: 12px; background: #3b82f6; border: 2px solid #fff; border-radius: 50%; }
-        
-        #panel { position: fixed; bottom: -100%; left: 0; width: 100%; height: 50%; background: #fff; z-index: 2000; transition: 0.4s; border-radius: 20px 20px 0 0; display: flex; flex-direction: column; }
-        #panel.open { bottom: 0; }
-        #emoji-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 20px; overflow-y: auto; font-size: 2rem; text-align: center; }
-        
-        /* Estilo Nube */
-        .marker-cluster-custom { background: #0f172a; border: 2px solid #fff; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        body, html { margin: 0; padding: 0; height: 100%; background: #111; color: white; font-family: sans-serif; }
+        #map { height: 100%; width: 100%; position: absolute; z-index: 1; }
+        #debug-log { 
+            position: absolute; top: 10px; left: 10px; right: 10px; 
+            background: rgba(0,0,0,0.8); color: #0f0; font-family: monospace; 
+            font-size: 10px; padding: 10px; z-index: 9999; pointer-events: none;
+            border: 1px solid #0f0; max-height: 150px; overflow-y: auto;
+        }
+        .error-msg { color: #ff4444; font-weight: bold; }
+        .status-ui { position: absolute; bottom: 20px; left: 20px; z-index: 1000; background: black; padding: 10px; border-radius: 8px; border: 1px solid #333; }
     </style>
 </head>
 <body>
 
-    <div class="search-bar">
-        <input type="text" id="addr-search" placeholder="🔍 Buscar lugar...">
-    </div>
-
+    <div id="debug-log">Iniciando sistema de diagnóstico...<br></div>
     <div id="map"></div>
-
-    <button class="btn-x" onclick="togglePanel()">X</button>
-
-    <div id="panel">
-        <div style="width:50px; height:5px; background:#ddd; margin:10px auto; border-radius:5px" onclick="togglePanel()"></div>
-        <div id="emoji-grid">
-            <span onclick="put('🔥')">🔥</span> <span onclick="put('⚠️')">⚠️</span> <span onclick="put('🚔')">🚔</span> <span onclick="put('🍕')">🍕</span> <span onclick="put('🍺')">🍺</span>
-            <span onclick="put('🐾')">🐾</span> <span onclick="put('🌲')">🌲</span> <span onclick="put('🏠')">🏠</span> <span onclick="put('📍')">📍</span> <span onclick="put('🛑')">🛑</span>
-            <span onclick="put('💀')">💀</span> <span onclick="put('🎉')">🎉</span> <span onclick="put('💎')">💎</span> <span onclick="put('🛠️')">🛠️</span> <span onclick="put('🚗')">🚗</span>
-        </div>
-    </div>
+    <div class="status-ui" id="status-ui">Estado: Esperando...</div>
 
     <script>
-        const _U = "https://echdpjhzjsaqtvdrkgaj.supabase.co", 
-              _K = "sb_publishable_j_v0LqOm9jcYqh4NAH9IDg_dVoOVi8s", 
-              _S = supabase.createClient(_U, _K);
+        const log = (msg, isError = false) => {
+            const div = document.getElementById('debug-log');
+            div.innerHTML += `<span class="${isError ? 'error-msg' : ''}">${new Date().toLocaleTimeString()}: ${msg}</span><br>`;
+            div.scrollTop = div.scrollHeight;
+        };
 
-        let map, userPos, cluster, active = new Set();
+        const _U = "https://echdpjhzjsaqtvdrkgaj.supabase.co";
+        const _K = "sb_publishable_j_v0LqOm9jcYqh4NAH9IDg_dVoOVi8s";
+        let map, _S;
 
-        function init() {
-            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([29.4, -110.9], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        window.onerror = (msg) => log("ERROR GLOBAL: " + msg, true);
 
-            cluster = L.markerClusterGroup({
-                maxClusterRadius: 40,
-                iconCreateFunction: (c) => L.divIcon({ html: '<div>'+c.getChildCount()+'</div>', className: 'marker-cluster-custom', iconSize: [35,35] })
-            });
-            map.addLayer(cluster);
-
-            map.locate({ watch: true, enableHighAccuracy: true });
-            map.on('locationfound', e => {
-                userPos = e.latlng;
-                if (!window.uM) window.uM = L.marker(e.latlng, { icon: L.divIcon({ className: 'user-loc' }) }).addTo(map);
-                else window.uM.setLatLng(e.latlng);
-            });
-
-            // Buscador Directo
-            document.getElementById('addr-search').addEventListener('keypress', async (e) => {
-                if(e.key === 'Enter') {
-                    const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(e.target.value)}&limit=1`);
-                    const d = await r.json();
-                    if(d.features.length) map.flyTo([d.features[0].geometry.coordinates[1], d.features[0].geometry.coordinates[0]], 17);
-                }
-            });
-
-            load();
-            setInterval(load, 10000);
-        }
-
-        function togglePanel() { 
-            if(userPos) map.panTo(userPos);
-            document.getElementById('panel').classList.toggle('open'); 
-        }
-
-        async function put(emoji) {
-            if(!userPos) return alert("Buscando señal GPS...");
-            const { error } = await _S.from('marcas').insert([{ 
-                emoji, latitud: userPos.lat, longitud: userPos.lng, 
-                expira_en: new Date(Date.now() + 259200000).toISOString() 
-            }]);
-            if(!error) { load(); togglePanel(); } else { alert("Error de Base de Datos"); }
-        }
-
-        async function load() {
-            const { data } = await _S.from('marcas').select('*').gt('expira_en', new Date().toISOString());
-            if(data) {
-                let batch = [];
-                data.forEach(m => {
-                    if(!active.has(m.id)) {
-                        batch.push(L.marker([m.latitud, m.longitud], { icon: L.divIcon({ html: '<div style="font-size:25px">'+m.emoji+'</div>', className: 'p' }) }));
-                        active.add(m.id);
-                    }
-                });
-                if(batch.length) cluster.addLayers(batch);
+        async function start() {
+            log("1. Conectando a Supabase...");
+            try {
+                _S = supabase.createClient(_U, _K);
+                const { data, error } = await _S.from('marcas').select('id').limit(1);
+                if (error) throw error;
+                log("CONEXIÓN SUPABASE: OK");
+            } catch (e) {
+                log("FALLO SUPABASE: " + e.message, true);
+                document.getElementById('status-ui').innerHTML = "Estado: ERROR SUPABASE";
             }
+
+            log("2. Cargando Mapa (Leaflet)...");
+            try {
+                map = L.map('map', { zoomControl: false }).setView([29.4, -110.9], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                log("MAPA: OK");
+            } catch (e) {
+                log("FALLO MAPA: " + e.message, true);
+            }
+
+            log("3. Buscando GPS...");
+            map.locate({ setView: true, maxZoom: 16 });
+            map.on('locationfound', () => {
+                log("GPS: LOCALIZADO");
+                document.getElementById('status-ui').innerHTML = "Estado: GPS OK";
+            });
+            map.on('locationerror', (e) => {
+                log("FALLO GPS: " + e.message, true);
+                document.getElementById('status-ui').innerHTML = "Estado: ERROR GPS";
+            });
         }
 
-        window.onload = init;
+        window.onload = start;
     </script>
 </body>
 </html>
