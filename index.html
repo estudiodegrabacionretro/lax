@@ -3,75 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>LA X - CLOUD MODE</title>
+    <title>LA X - FIXED CAMERA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1/index.js"></script>
+    
     <style>
         :root { --accent: #0f172a; }
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
         #map { position: absolute; inset: 0; z-index: 1; filter: saturate(0.8); }
-        .user-dot { width: 14px; height: 14px; background: #3b82f6; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
         
-        /* Estilo de la "Nube" de grupo */
-        .marker-cluster-small { background-color: rgba(30, 41, 59, 0.6); }
-        .marker-cluster-small div { background-color: rgba(30, 41, 59, 0.9); color: white; font-weight: bold; }
+        .marker-cluster { background-clip: padding-box; border-radius: 20px; }
+        .marker-cluster div {
+            width: 30px; height: 30px; margin-left: 5px; margin-top: 5px;
+            text-align: center; border-radius: 15px; font-size: 12px;
+            background-color: rgba(15, 23, 42, 0.9); color: white;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold;
+        }
 
-        .search-container { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 92%; z-index: 2000; }
-        #search-input { width: 100%; padding: 15px; border-radius: 15px; border: none; box-shadow: 0 4px 20px rgba(0,0,0,0.2); outline: none; }
+        .user-dot { width: 14px; height: 14px; background: #3b82f6; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+
+        .search-container { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 92%; z-index: 5000; }
+        #search-input { width: 100%; padding: 16px; border-radius: 15px; border: none; box-shadow: 0 4px 25px rgba(0,0,0,0.3); outline: none; font-size: 16px; }
+        #results-box { background: white; border-radius: 0 0 15px 15px; margin-top: 2px; display: none; max-height: 200px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .res-item { padding: 14px; border-bottom: 1px solid #eee; color: #1e293b; font-size: 14px; }
+
+        .btn-main { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 85px; height: 85px; border-radius: 50%; background: var(--accent); color: white; font-size: 2.5rem; z-index: 2000; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
         
-        .btn-main { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 85px; height: 85px; border-radius: 50%; background: var(--accent); color: white; font-size: 2.5rem; z-index: 1500; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
-        
-        #emoji-container { position: fixed; bottom: -100%; left: 0; width: 100%; height: 60%; background: white; z-index: 4000; transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 30px 30px 0 0; }
+        #emoji-container { position: fixed; bottom: -100%; left: 0; width: 100%; height: 60%; background: white; z-index: 6000; transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 30px 30px 0 0; }
         #emoji-container.active { bottom: 0; }
         emoji-picker { width: 100%; height: 100%; }
-        
-        .loading-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.8); z-index: 5000; display: none; align-items: center; justify-content: center; border-radius: 30px 30px 0 0; }
+        .loader { position: absolute; inset: 0; background: rgba(255,255,255,0.8); z-index: 7000; display: none; align-items: center; justify-content: center; border-radius: 30px 30px 0 0; }
     </style>
 </head>
 <body>
+
     <div id="map"></div>
+
     <div class="search-container">
-        <input type="text" id="search-input" placeholder="🔍 Buscar lugar..." autocomplete="off">
+        <input type="text" id="search-input" placeholder="🔍 Buscar lugar o dirección..." autocomplete="off">
+        <div id="results-box"></div>
     </div>
+
     <button id="record-btn" class="btn-main" onclick="handleX()" disabled>X</button>
+
     <div id="emoji-container">
-        <div id="loader" class="loading-overlay"><b>ENVIANDO...</b></div>
+        <div id="send-load" class="loader"><b>ENVIANDO...</b></div>
         <div style="width:40px; height:5px; background:#ccc; margin:12px auto; border-radius:5px" onclick="closePanel()"></div>
         <emoji-picker id="picker"></emoji-picker>
     </div>
 
     <script>
         const _U = "https://echdpjhzjsaqtvdrkgaj.supabase.co", _K = "sb_publishable_j_v0LqOm9jcYqh4NAH9IDg_dVoOVi8s", _S = supabase.createClient(_U, _K);
-        let map, userPos, userMarker, markerCluster;
-        let activeMarkers = new Set(); // Para no duplicar
+        let map, userPos, userMarker, clusterGroup, activeIds = new Set();
+        let firstLoad = true;
 
         function init() {
+            // Inicialización con centro neutro
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([29.4, -110.9], 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             
-            // Inicializar el grupo de "Nubes"
-            markerCluster = L.markerClusterGroup({
-                spiderfyOnMaxZoom: true, // Abre los emojis en abanico al llegar al máximo zoom
+            clusterGroup = L.markerClusterGroup({
+                maxClusterRadius: 40,
+                spiderfyOnMaxZoom: true,
                 showCoverageOnHover: false,
                 zoomToBoundsOnClick: true
             });
-            map.addLayer(markerCluster);
+            map.addLayer(clusterGroup);
 
+            // Localización: setView: false es lo que impide que la cámara salte sola
             map.locate({ setView: false, watch: true, enableHighAccuracy: true });
+            
             map.on('locationfound', e => {
                 userPos = e.latlng;
                 document.getElementById('record-btn').disabled = false;
+                
                 if (!userMarker) {
                     userMarker = L.marker(e.latlng, { icon: L.divIcon({ className: 'user-dot' }) }).addTo(map);
+                } else {
+                    userMarker.setLatLng(e.latlng);
+                }
+
+                // Solo centramos la cámara la primerísima vez que abre la app
+                if (firstLoad) {
                     map.panTo(e.latlng);
-                } else { userMarker.setLatLng(e.latlng); }
+                    firstLoad = false;
+                }
             });
 
-            document.querySelector('emoji-picker').
+            // Buscador Reparado
+            const sInp = document.getElementById('search-input');
+            const rBox = document.getElementById('results-box');
+            
+            sInp.addEventListener('input', debounce(async () => {
+                const q = sInp.value;
+                if (q.length < 3) { rBox.style.display = 'none'; return; }
+                
+                const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5${userPos ? `&lat=${userPos.lat}&lon=${userPos.lng}` : ''}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                rBox.
