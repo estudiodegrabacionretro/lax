@@ -2,52 +2,57 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>LA X - FINAL FIX</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LA X - RESCUE MODE</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1/index.js"></script>
-    
+
     <style>
-        :root { --accent: #0f172a; }
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #000; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; overflow: hidden; }
         
-        /* Contenedor del mapa forzado */
-        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 10; background: #111; }
+        /* Forzar visibilidad del mapa */
+        #map { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: 1; 
+            background: #222; /* Color de fondo si falla el tile */
+        }
+
+        .search-container { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 90%; z-index: 1000; }
+        #search-input { width: 100%; padding: 15px; border-radius: 12px; border: none; font-size: 16px; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
         
-        /* Estilo Nube (Cluster) */
+        #results-box { background: white; border-radius: 0 0 12px 12px; display: none; max-height: 200px; overflow-y: auto; }
+        .res-item { padding: 12px; border-bottom: 1px solid #eee; font-family: sans-serif; }
+
+        .btn-main { 
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
+            width: 80px; height: 80px; border-radius: 50%; 
+            background: #0f172a; color: white; font-size: 2rem; 
+            z-index: 2000; border: 4px solid #3b82f6; 
+        }
+
+        .user-dot { width: 12px; height: 12px; background: #3b82f6; border: 2px solid white; border-radius: 50%; }
+
+        /* Estilo de la Nube de Emojis */
         .marker-cluster-custom {
-            background: rgba(15, 23, 42, 0.9);
-            border: 2px solid #fff;
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid #3b82f6;
             border-radius: 50%;
-            color: #fff;
-            font-weight: bold;
+            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            font-weight: bold;
+            font-family: sans-serif;
         }
 
-        .user-dot { width: 14px; height: 14px; background: #3b82f6; border: 2px solid white; border-radius: 50%; z-index: 1000; }
-
-        .search-container { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 92%; z-index: 5000; }
-        #search-input { width: 100%; padding: 16px; border-radius: 15px; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.4); outline: none; font-size: 16px; }
-        #results-box { background: white; border-radius: 0 0 15px 15px; margin-top: 2px; display: none; max-height: 200px; overflow-y: auto; }
-        .res-item { padding: 14px; border-bottom: 1px solid #eee; color: #1e293b; }
-
-        .btn-main { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 85px; height: 85px; border-radius: 50%; background: var(--accent); color: white; font-size: 2.5rem; z-index: 2000; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
-        
-        #emoji-container { position: fixed; bottom: -100%; left: 0; width: 100%; height: 60%; background: white; z-index: 6000; transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 30px 30px 0 0; }
+        #emoji-container { position: fixed; bottom: -100%; left: 0; width: 100%; height: 50%; background: white; z-index: 3000; transition: 0.3s; border-radius: 20px 20px 0 0; }
         #emoji-container.active { bottom: 0; }
-        emoji-picker { width: 100%; height: 100%; }
     </style>
 </head>
 <body>
@@ -55,108 +60,101 @@
     <div id="map"></div>
 
     <div class="search-container">
-        <input type="text" id="search-input" placeholder="🔍 Escribe una dirección..." autocomplete="off">
+        <input type="text" id="search-input" placeholder="Buscar dirección..." autocomplete="off">
         <div id="results-box"></div>
     </div>
 
-    <button id="record-btn" class="btn-main" onclick="handleX()" disabled>X</button>
+    <button id="record-btn" class="btn-main" onclick="handleX()">X</button>
 
     <div id="emoji-container">
-        <div style="width:40px; height:5px; background:#ccc; margin:12px auto; border-radius:5px" onclick="closePanel()"></div>
-        <emoji-picker id="picker"></emoji-picker>
+        <div style="width:40px; height:5px; background:#ccc; margin:10px auto; border-radius:5px" onclick="closePanel()"></div>
+        <emoji-picker id="picker" style="width: 100%; height: 90%;"></emoji-picker>
     </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1/index.js"></script>
 
     <script>
         const _U = "https://echdpjhzjsaqtvdrkgaj.supabase.co", 
               _K = "sb_publishable_j_v0LqOm9jcYqh4NAH9IDg_dVoOVi8s", 
               _S = supabase.createClient(_U, _K);
-        
+
         let map, userPos, userMarker, clusterGroup;
         let activeIds = new Set();
-        let isFirstLoad = true;
 
         function init() {
-            // Evitar reinicialización si ya existe
-            if (map) return;
+            console.log("Iniciando Mapa...");
+            try {
+                map = L.map('map', { zoomControl: false, attributionControl: false }).setView([29.4, -110.9], 13);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([29.4, -110.9], 15);
-            
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19
-            }).addTo(map);
-            
-            clusterGroup = L.markerClusterGroup({
-                maxClusterRadius: 50,
-                spiderfyOnMaxZoom: true,
-                iconCreateFunction: function(cluster) {
-                    return L.divIcon({ 
-                        html: '<div>' + cluster.getChildCount() + '</div>', 
-                        className: 'marker-cluster-custom', 
-                        iconSize: L.point(40, 40) 
-                    });
-                }
-            });
-            map.addLayer(clusterGroup);
-
-            map.locate({ setView: false, watch: true, enableHighAccuracy: true });
-            
-            map.on('locationfound', e => {
-                userPos = e.latlng;
-                document.getElementById('record-btn').disabled = false;
-                if (!userMarker) {
-                    userMarker = L.marker(e.latlng, { icon: L.divIcon({ className: 'user-dot' }) }).addTo(map);
-                } else userMarker.setLatLng(e.latlng);
-
-                if (isFirstLoad) {
-                    map.setView(e.latlng, 16);
-                    isFirstLoad = false;
-                }
-            });
-
-            // Buscador corregido
-            const sInp = document.getElementById('search-input');
-            const rBox = document.getElementById('results-box');
-            
-            sInp.addEventListener('input', debounce(async () => {
-                const q = sInp.value;
-                if (q.length < 3) { rBox.style.display = 'none'; return; }
-                try {
-                    const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5`);
-                    const data = await res.json();
-                    rBox.innerHTML = '';
-                    if (data.features.length) {
-                        rBox.style.display = 'block';
-                        data.features.forEach(f => {
-                            const d = document.createElement('div');
-                            d.className = 'res-item';
-                            d.innerHTML = `<b>${f.properties.name || ''}</b> <br> <span class="text-xs">${f.properties.city || ''}</span>`;
-                            d.onclick = () => {
-                                map.flyTo([f.geometry.coordinates[1], f.geometry.coordinates[0]], 17);
-                                rBox.style.display = 'none';
-                                sInp.value = f.properties.name;
-                            };
-                            rBox.appendChild(d);
+                clusterGroup = L.markerClusterGroup({
+                    maxClusterRadius: 50,
+                    spiderfyOnMaxZoom: true,
+                    iconCreateFunction: function(cluster) {
+                        return L.divIcon({ 
+                            html: '<div>' + cluster.getChildCount() + '</div>', 
+                            className: 'marker-cluster-custom', 
+                            iconSize: L.point(40, 40) 
                         });
                     }
-                } catch(e) { console.error("Error búsqueda", e); }
-            }, 500));
+                });
+                map.addLayer(clusterGroup);
 
-            document.querySelector('emoji-picker').addEventListener('emoji-click', e => sendEmoji(e.detail.unicode));
-            
-            loadData();
-            setInterval(loadData, 15000);
+                map.locate({ setView: true, maxZoom: 16 });
+
+                map.on('locationfound', e => {
+                    userPos = e.latlng;
+                    if (!userMarker) {
+                        userMarker = L.marker(e.latlng, { icon: L.divIcon({ className: 'user-dot' }) }).addTo(map);
+                    } else userMarker.setLatLng(e.latlng);
+                });
+
+                map.on('locationerror', () => console.warn("GPS no disponible, usando centro manual."));
+
+                // Buscador
+                const sInp = document.getElementById('search-input');
+                const rBox = document.getElementById('results-box');
+                sInp.addEventListener('input', async () => {
+                    if (sInp.value.length < 3) { rBox.style.display = 'none'; return; }
+                    const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(sInp.value)}&limit=5`);
+                    const data = await res.json();
+                    rBox.innerHTML = '';
+                    rBox.style.display = 'block';
+                    data.features.forEach(f => {
+                        const d = document.createElement('div');
+                        d.className = 'res-item';
+                        d.innerHTML = f.properties.name || 'Lugar';
+                        d.onclick = () => {
+                            map.flyTo([f.geometry.coordinates[1], f.geometry.coordinates[0]], 17);
+                            rBox.style.display = 'none';
+                        };
+                        rBox.appendChild(d);
+                    });
+                });
+
+                document.querySelector('emoji-picker').addEventListener('emoji-click', e => sendEmoji(e.detail.unicode));
+
+                loadData();
+                setInterval(loadData, 10000);
+            } catch (err) {
+                console.error("ERROR CRÍTICO:", err);
+                alert("Error cargando el mapa: " + err.message);
+            }
         }
 
         function handleX() {
-            if (userPos) {
-                map.flyTo(userPos, 18);
-                document.getElementById('emoji-container').classList.add('active');
-            }
+            if (userPos) map.panTo(userPos);
+            document.getElementById('emoji-container').classList.add('active');
         }
 
         function closePanel() { document.getElementById('emoji-container').classList.remove('active'); }
 
         async function sendEmoji(emoji) {
+            if (!userPos) return alert("Esperando GPS...");
             const { error } = await _S.from('marcas').insert([{ 
                 emoji, latitud: userPos.lat, longitud: userPos.lng, 
                 expira_en: new Date(Date.now() + 259200000).toISOString() 
@@ -165,24 +163,22 @@
         }
 
         async function loadData() {
-            const { data, error } = await _S.from('marcas').select('*').gt('expira_en', new Date().toISOString());
-            if (error) return;
-            
-            let newBatch = [];
-            data.forEach(m => {
-                if (!activeIds.has(m.id)) {
-                    const mark = L.marker([m.latitud, m.longitud], { 
-                        icon: L.divIcon({ html: `<div style="font-size:30px">${m.emoji}</div>`, className: 'p' }) 
-                    });
-                    newBatch.push(mark);
-                    activeIds.add(m.id);
-                }
-            });
-            if (newBatch.length > 0) clusterGroup.addLayers(newBatch);
+            const { data } = await _S.from('marcas').select('*').gt('expira_en', new Date().toISOString());
+            if (data) {
+                let batch = [];
+                data.forEach(m => {
+                    if (!activeIds.has(m.id)) {
+                        const mark = L.marker([m.latitud, m.longitud], { 
+                            icon: L.divIcon({ html: `<div style="font-size:25px">${m.emoji}</div>`, className: 'p' }) 
+                        });
+                        batch.push(mark);
+                        activeIds.add(m.id);
+                    }
+                });
+                if (batch.length > 0) clusterGroup.addLayers(batch);
+            }
         }
 
-        function debounce(f, t) { let tm; return (...a) => { clearTimeout(tm); tm = setTimeout(() => f.apply(this, a), t); }; }
-        
         window.onload = init;
     </script>
 </body>
