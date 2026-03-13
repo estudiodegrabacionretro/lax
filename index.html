@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>LA X - FULL COLLECTION</title>
+    <title>LA X - MAPA PURO</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -16,45 +16,43 @@
     
     <style>
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
-        #map { position: absolute; inset: 0; z-index: 1; background: #111; }
+        
+        /* El mapa ahora ocupa todo sin interrupciones */
+        #map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; z-index: 1; background: #111; }
 
-        .search-addr { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 92%; z-index: 5000; }
-        #addr-input { width: 100%; padding: 14px; border-radius: 12px; border: none; box-shadow: 0 4px 20px rgba(0,0,0,0.4); outline: none; font-size: 16px; background: rgba(255,255,255,0.9); }
-
-        .btn-main { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 85px; height: 85px; border-radius: 50%; background: #0f172a; color: white; font-size: 2.5rem; z-index: 2000; border: 4px solid #3b82f6; box-shadow: 0 10px 30px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; }
+        .btn-main { 
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); 
+            width: 85px; height: 85px; border-radius: 50%; background: #0f172a; 
+            color: white; font-size: 2.5rem; z-index: 2000; border: 4px solid #3b82f6; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6); display: flex; align-items: center; 
+            justify-content: center; font-weight: bold; cursor: pointer; 
+        }
 
         #emoji-container {
-            position: fixed; bottom: -100%; left: 0; width: 100%; height: 75%;
+            position: fixed; bottom: -100%; left: 0; width: 100%; height: 70%;
             background: #16213e; z-index: 6000;
             transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             border-radius: 24px 24px 0 0;
             display: flex; flex-direction: column;
+            box-shadow: 0 -8px 40px rgba(0,0,0,0.8);
         }
         #emoji-container.active { bottom: 0; }
 
         .panel-handle { width: 44px; height: 5px; background: #2e4070; border-radius: 3px; margin: 12px auto 8px; flex-shrink: 0; }
 
-        #emoji-search {
-            margin: 0 12px 8px; padding: 12px;
-            border-radius: 12px; border: none;
-            background: #0f172a; color: white;
-            font-size: 16px; outline: none;
-        }
-
         #cat-tabs {
-            display: flex; overflow-x: auto; padding: 5px 10px;
-            border-bottom: 1px solid #1e3060; gap: 15px; scrollbar-width: none;
+            display: flex; overflow-x: auto; padding: 10px;
+            border-bottom: 1px solid #1e3060; gap: 20px; scrollbar-width: none;
         }
         #cat-tabs::-webkit-scrollbar { display: none; }
-        .cat-tab { font-size: 1.6rem; cursor: pointer; opacity: 0.5; padding-bottom: 8px; transition: 0.2s; flex-shrink: 0; }
+        .cat-tab { font-size: 1.6rem; cursor: pointer; opacity: 0.5; padding-bottom: 8px; flex-shrink: 0; }
         .cat-tab.active { opacity: 1; border-bottom: 3px solid #3b82f6; }
 
         #emoji-scroll { flex: 1; overflow-y: auto; padding: 10px; -webkit-overflow-scrolling: touch; }
-        .emoji-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
-        .emoji-item { font-size: 2rem; text-align: center; padding: 10px 0; cursor: pointer; user-select: none; }
-        .emoji-item:active { transform: scale(1.4); background: rgba(59, 130, 246, 0.3); border-radius: 12px; }
+        .emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+        .emoji-item { font-size: 2.2rem; text-align: center; padding: 10px 0; cursor: pointer; user-select: none; }
 
-        .user-dot { width: 16px; height: 16px; background: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px #3b82f6; }
+        .user-dot { width: 18px; height: 18px; background: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 15px #3b82f6; }
         .marker-cluster-custom { background: #0f172a; border: 2px solid #3b82f6; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
     </style>
 </head>
@@ -62,15 +60,10 @@
 
     <div id="map"></div>
 
-    <div class="search-addr">
-        <input type="text" id="addr-input" placeholder="🔍 Buscar dirección y Enter..." autocomplete="off">
-    </div>
-
     <button id="record-btn" class="btn-main" onclick="handleX()">X</button>
 
     <div id="emoji-container">
         <div class="panel-handle" onclick="closePanel()"></div>
-        <input type="text" id="emoji-search" placeholder="🔍 Filtrar tu colección...">
         <div id="cat-tabs"></div>
         <div id="emoji-scroll">
             <div id="emoji-grid" class="emoji-grid"></div>
@@ -85,23 +78,23 @@
         let map, userPos, userMarker, clusterGroup, activeIds = new Set();
         let isFirstLoad = true;
 
-        // TU COLECCIÓN COMPLETA RECUPERADA
         const EMOJI_CATS = [
-            { icon: '⭐', label: 'Frecuentes', emojis: ['🔥','⚠️','📍','🐾','🦌','💧','⛺','🏠','🚨','✅','❌','🆘'] },
-            { icon: '😀', label: 'Caritas', emojis: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾'] },
-            { icon: '👋', label: 'Personas', emojis: ['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🫀','🫁','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸'] },
-            { icon: '🐶', label: 'Animales', emojis: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🦅','🦆','🦢','🦉','🦚','🦜','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🦟','🦗','蝎','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🦣','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🦬','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐈','🐓','🦃','🦤','🦚','🦩','🦢','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿️','🦔'] },
-            { icon: '🌵', label: 'Naturaleza', emojis: ['🌵','🎄','🌲','🌳','🌴','🪵','🌱','🌿','☘️','🍀','🎍','🪴','🎋','🍃','🍂','🍁','🪺','🪹',' mushrooms','🌾','💐','🌷','🌹','🥀','🌺','🌸','🌼','🌻','🌞','🌝','🌛','🌜','🌚','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌙','🌟','⭐','🌠','🌌','☁️','⛅','🌤️','🌥️','🌦️','🌧️','⛈️','🌩️','🌨️','❄️','☃️','⛄','🌬️','💨','🌀','🌈','🌂','☂️','☔','⛱️','⚡','❄️','🔥','💧','🌊','🫧'] },
-            { icon: '🍕', label: 'Comida', emojis: ['🍎','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🫒','🥑','🍆','🥔','🥕','🌽','🌶️','🫑','🥦','🧄','🧅','🥜','🫘','🍞','🥐','🥖','🫓','🥨','🧀','🥚','🍳','バター','🥞','🧇','🥓','🥩','🍗','🍖','🦴','🌭','🍔','🍟','🍕','🫔','🌮','🌯','🥙','🧆','🥚','🍿','🧂','🥫','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🦀','🦞','🦐','寿司','🍤','🍙','🥟','🦪','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯','🍼','🥛','☕','🫖','🍵','🧃','🥤','🧋','🍶','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🧉','🍾'] },
+            { icon: '⭐', label: 'Top', emojis: ['🔥','⚠️','📍','🐾','🦌','💧','🏠','🚨','✅','❌','🆘'] },
+            { icon: '😀', label: 'Caras', emojis: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾'] },
+            { icon: '👋', label: 'Gente', emojis: ['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🫀','🫁','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸'] },
+            { icon: '🐶', label: 'Animales', emojis: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🦅','🦆','🦢','🦉','🦚','🦜','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🦟','🦗','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🦣','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🦬','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐈','🐓','🦃','🦤','🦚','🦩','🦢','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿️','🦔'] },
+            { icon: '🌵', label: 'Naturaleza', emojis: ['🌵','🎄','🌲','🌳','🌴','🪵','🌱','🌿','☘️','🍀','🎍','🪴','🎋','🍃','🍂','🍁','🪺','🪹','🍄','🌾','💐','🌷','🌹','🥀','🌺','🌸','🌼','🌻','🌞','🌝','🌛','🌜','🌚','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌙','🌟','⭐','🌠','🌌','☁️','⛅','🌤️','🌥️','🌦️','🌧️','⛈️','🌩️','🌨️','❄️','☃️','⛄','🌬️','💨','🌀','🌈','🌂','☂️','☔','⛱️','⚡','❄️','🔥','💧','🌊','🫧'] },
+            { icon: '🍕', label: 'Comida', emojis: ['🍎','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🫒','🥑','🍆','🥔','🥕','🌽','🌶️','🫑','🥦','🧄','🧅','🥜','🫘','🍞','🥐','🥖','🫓','🥨','🧀','🥚','🍳','🧈','🥞','🧇','🥓','🥩','🍗','🍖','🦴','🌭','🍔','🍟','🍕','🫔','🌮','🌯','🥙','🧆','🥚','🍿','🧂','🥫','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🦀','🦞','🦐','🍣','🍤','🍙','🥟','🦪','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯','🍼','🥛','☕','🫖','🍵','🧃','🥤','🧋','🍶','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🧉','🍾'] },
             { icon: '🚗', label: 'Viaje', emojis: ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🏍️','🛵','🚲','🛴',' skateboard','🛼','🚏','🛣️','🛤️','⛽','🚧','🚦','🚥','🛑','⚓','🛶','⛵','🚤','🛥️','🛳️','⛴️','🚢','✈️','🛩️','🛫','🛬','🛰️','🚀','🛸','🚁','🛺','🚂','🚃','🚄','🚅','🚆','🚇','🚈','🚉','🚊','🚝','🚞','🚋'] },
-            { icon: '⚽', label: 'Actividades', emojis: ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓',' badminton','🏒','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥅','⛳','🪁','🏹','Fishing','🤿','🎽','🎿','🛷','🥌','🎯','🪃','🏋️','🤸','🤺','🏇','⛷️','🏂','🪂','🤼','🤽','🤾','🏌️','🧘','🛀','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖️','🏵️','🎗️','🎫','🎟️','🎪','🤹','🎭','🩰','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🪘','🎷','🎺','🎸','🪕','🎻','🎲','♟️','🎯','🎳','🎮','🕹️'] },
+            { icon: '⚽', label: 'Deporte', emojis: ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓',' badminton','🏒','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥅','⛳','🪁','🏹','Fishing','🤿','🎽','🎿','🛷','🥌','🎯','🪃','🏋️','🤸','🤺','🏇','⛷️','🏂','🪂','🤼','🤽','🤾','🏌️','🧘','🛀','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖️','🏵️','🎗️','🎫','🎟️','🎪','🤹','🎭','🩰','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🪘','🎷','🎺','🎸','🪕','🎻','🎲','♟️','🎯','🎳','🎮','🕹️'] },
             { icon: '🏠', label: 'Lugares', emojis: ['🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏭','🏗️','🧱','🪨','🪵','🛖','🏘️','🏚️','🏰','🏯','🏟️','🗼','🗽','⛪','🕌','🛕',' synagogue','⛩️','🗾','🎑','🏞️','🌅','🌄','🌠','🎇','🎆','🌇','🌆','🏙️','🌃','🌌','🌉','🌁','🗺️','🧭','🏔️','⛰️','🌋','🗻','🏕️','🏖️',' desert','🏝️','🏛️'] },
             { icon: '💡', label: 'Objetos', emojis: ['💡','🔦','🕯️','🪔','🧯','🛢️','💰','💳','💎','⚖️','🔑','🗝️','🔨','🪓','⛏️','⚒️','🛠️','🗡️','⚔️','🛡️','🪚',' wrench','🪛','🔩','⚙️','🗜️','⚗️','🧪','🧫','🧬','🔬','🔭','📡','💊','🩺','🩻','🩹','🩼','🌡️','🧲',' ladder','🪝','🔋','🔌','💻','🖥️','📱','📲','📷','📸','📹','🎥','📞','☎️','📟',' FAX','📺','📻','🧭','⏰','⌚','⏱️','⏲️','🕰️','⌛','⏳'] },
-            { icon: '❤️', label: 'Símbolos', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','⚕️','♻️','⚜️','🔱','📛','🔰','⭕','✅','☑️','✔️','❌','❎','➕','➖','➗','✖️','🟰','♾️','💲','💱','‼️','⁉️','❓','❔','❕','❗','〰️','🔅','🔆','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','🔷','🔶','🔹','🔸','🔲','🔳','▪️','▫️','◾','◽','◼️','◻️'] },
-            { icon: '🚩', label: 'Banderas', emojis: ['🏁','🚩','🎌','🏴','🏳️','🏴‍☠️','🇲🇽','🇺🇸','🇨🇦','🇬🇧','🇫🇷','🇩🇪','🇪🇸','🇧🇷','🇦🇷','🇨🇴','🇨🇱','🇵🇪','🇻🇪','🇨🇺','🇯🇵','🇨🇳','🇰🇷','🇮🇳','🇷🇺','🇮🇹','🇵🇹','🇳🇱','🇧🇪','🇨🇭','🇸🇪','🇳🇴','🇩🇰','🇵🇱','🇺🇦','🇮🇱','🇸🇦','🇦🇪','🇹🇷','🇬🇷','🇦🇺','🇳🇿','🇿🇦','🇳🇬','🇰🇪','🇪🇬','🇲🇦'] }
+            { icon: '❤️', label: 'Signos', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','⚕️','♻️','⚜️','🔱','📛','🔰','⭕','✅','☑️','✔️','❌','❎','➕','➖','➗','✖️','🟰','♾️','💲','💱','‼️','⁉️','❓','❔','❕','❗','〰️','🔅','🔆','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','🔷','🔶','🔹','🔸','🔲','🔳','▪️','▫️','◾','◽','◼️','◻️'] },
+            { icon: '🚩', label: 'Países', emojis: ['🏁','🚩','🎌','🏴','🏳️','🏴‍☠️','🇲🇽','🇺🇸','🇨🇦','🇬🇧','🇫🇷','🇩🇪','🇪🇸','🇧🇷','🇦🇷','🇨🇴','🇨🇱','🇵🇪','🇻🇪','🇨🇺','🇯🇵','🇨🇳','🇰🇷','🇮🇳','🇷🇺','🇮🇹','🇵🇹','🇳🇱','🇧🇪','🇨🇭','🇸🇪','🇳🇴','🇩🇰','🇵🇱','🇺🇦','🇮🇱','🇸🇦','🇦🇪','🇹🇷','🇬🇷','🇦🇺','🇳🇿','🇿🇦','🇳🇬','🇰🇪','🇪🇬','🇲🇦'] }
         ];
 
         function init() {
+            // Inicialización forzada del mapa
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([29.4, -110.9], 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
@@ -112,7 +105,7 @@
             map.addLayer(clusterGroup);
 
             renderTabs();
-            renderEmojis('', 'Frecuentes');
+            renderEmojis('Top');
 
             map.locate({ setView: false, watch: true, enableHighAccuracy: true });
             map.on('locationfound', e => {
@@ -120,23 +113,6 @@
                 if (!userMarker) userMarker = L.marker(e.latlng, { icon: L.divIcon({ className: 'user-dot' }) }).addTo(map);
                 else userMarker.setLatLng(e.latlng);
                 if (isFirstLoad) { map.flyTo(e.latlng, 16); isFirstLoad = false; }
-            });
-
-            // Buscador de direcciones
-            document.getElementById('addr-input').addEventListener('keypress', async (e) => {
-                if(e.key === 'Enter') {
-                    const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(e.target.value)}&limit=1`);
-                    const data = await res.json();
-                    if(data.features.length) {
-                        const c = data.features[0].geometry.coordinates;
-                        map.flyTo([c[1], c[0]], 17);
-                    }
-                }
-            });
-
-            // Buscador de emojis corregido
-            document.getElementById('emoji-search').addEventListener('input', (e) => {
-                renderEmojis(e.target.value);
             });
 
             loadData();
@@ -152,8 +128,59 @@
                 span.onclick = () => {
                     document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
                     span.classList.add('active');
-                    renderEmojis('', cat.label);
+                    renderEmojis(cat.label);
                 };
                 tabs.appendChild(span);
             });
         }
+
+        function renderEmojis(category) {
+            const grid = document.getElementById('emoji-grid');
+            grid.innerHTML = '';
+            const list = EMOJI_CATS.find(c => c.label === category).emojis;
+
+            list.forEach(emoji => {
+                const div = document.createElement('div');
+                div.className = 'emoji-item';
+                div.innerText = emoji;
+                div.onclick = () => sendEmoji(emoji);
+                grid.appendChild(div);
+            });
+        }
+
+        function handleX() {
+            if (userPos) map.panTo(userPos);
+            document.getElementById('emoji-container').classList.add('active');
+        }
+
+        function closePanel() { document.getElementById('emoji-container').classList.remove('active'); }
+
+        async function sendEmoji(emoji) {
+            if (!userPos) return;
+            const { error } = await _S.from('marcas').insert([{
+                emoji, latitud: userPos.lat, longitud: userPos.lng,
+                expira_en: new Date(Date.now() + 259200000).toISOString()
+            }]);
+            if (!error) { loadData(); closePanel(); }
+        }
+
+        async function loadData() {
+            const { data } = await _S.from('marcas').select('*').gt('expira_en', new Date().toISOString());
+            if (data) {
+                let batch = [];
+                data.forEach(m => {
+                    if (!activeIds.has(m.id)) {
+                        batch.push(L.marker([m.latitud, m.longitud], {
+                            icon: L.divIcon({ html: `<div style="font-size:32px">${m.emoji}</div>`, className: 'p' })
+                        }));
+                        activeIds.add(m.id);
+                    }
+                });
+                if (batch.length) clusterGroup.addLayers(batch);
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
