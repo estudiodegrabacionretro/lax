@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>LA X - FIXED CAMERA</title>
+    <title>LA X - FINAL FIX</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
@@ -17,32 +18,36 @@
     
     <style>
         :root { --accent: #0f172a; }
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
-        #map { position: absolute; inset: 0; z-index: 1; filter: saturate(0.8); }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #000; }
         
-        .marker-cluster { background-clip: padding-box; border-radius: 20px; }
-        .marker-cluster div {
-            width: 30px; height: 30px; margin-left: 5px; margin-top: 5px;
-            text-align: center; border-radius: 15px; font-size: 12px;
-            background-color: rgba(15, 23, 42, 0.9); color: white;
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            display: flex; align-items: center; justify-content: center;
+        /* Contenedor del mapa forzado */
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; z-index: 10; background: #111; }
+        
+        /* Estilo Nube (Cluster) */
+        .marker-cluster-custom {
+            background: rgba(15, 23, 42, 0.9);
+            border: 2px solid #fff;
+            border-radius: 50%;
+            color: #fff;
             font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
 
-        .user-dot { width: 14px; height: 14px; background: #3b82f6; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+        .user-dot { width: 14px; height: 14px; background: #3b82f6; border: 2px solid white; border-radius: 50%; z-index: 1000; }
 
         .search-container { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 92%; z-index: 5000; }
-        #search-input { width: 100%; padding: 16px; border-radius: 15px; border: none; box-shadow: 0 4px 25px rgba(0,0,0,0.3); outline: none; font-size: 16px; }
-        #results-box { background: white; border-radius: 0 0 15px 15px; margin-top: 2px; display: none; max-height: 200px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .res-item { padding: 14px; border-bottom: 1px solid #eee; color: #1e293b; font-size: 14px; }
+        #search-input { width: 100%; padding: 16px; border-radius: 15px; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.4); outline: none; font-size: 16px; }
+        #results-box { background: white; border-radius: 0 0 15px 15px; margin-top: 2px; display: none; max-height: 200px; overflow-y: auto; }
+        .res-item { padding: 14px; border-bottom: 1px solid #eee; color: #1e293b; }
 
-        .btn-main { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 85px; height: 85px; border-radius: 50%; background: var(--accent); color: white; font-size: 2.5rem; z-index: 2000; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+        .btn-main { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 85px; height: 85px; border-radius: 50%; background: var(--accent); color: white; font-size: 2.5rem; z-index: 2000; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
         
         #emoji-container { position: fixed; bottom: -100%; left: 0; width: 100%; height: 60%; background: white; z-index: 6000; transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 30px 30px 0 0; }
         #emoji-container.active { bottom: 0; }
         emoji-picker { width: 100%; height: 100%; }
-        .loader { position: absolute; inset: 0; background: rgba(255,255,255,0.8); z-index: 7000; display: none; align-items: center; justify-content: center; border-radius: 30px 30px 0 0; }
     </style>
 </head>
 <body>
@@ -50,66 +55,135 @@
     <div id="map"></div>
 
     <div class="search-container">
-        <input type="text" id="search-input" placeholder="🔍 Buscar lugar o dirección..." autocomplete="off">
+        <input type="text" id="search-input" placeholder="🔍 Escribe una dirección..." autocomplete="off">
         <div id="results-box"></div>
     </div>
 
     <button id="record-btn" class="btn-main" onclick="handleX()" disabled>X</button>
 
     <div id="emoji-container">
-        <div id="send-load" class="loader"><b>ENVIANDO...</b></div>
         <div style="width:40px; height:5px; background:#ccc; margin:12px auto; border-radius:5px" onclick="closePanel()"></div>
         <emoji-picker id="picker"></emoji-picker>
     </div>
 
     <script>
-        const _U = "https://echdpjhzjsaqtvdrkgaj.supabase.co", _K = "sb_publishable_j_v0LqOm9jcYqh4NAH9IDg_dVoOVi8s", _S = supabase.createClient(_U, _K);
-        let map, userPos, userMarker, clusterGroup, activeIds = new Set();
-        let firstLoad = true;
+        const _U = "https://echdpjhzjsaqtvdrkgaj.supabase.co", 
+              _K = "sb_publishable_j_v0LqOm9jcYqh4NAH9IDg_dVoOVi8s", 
+              _S = supabase.createClient(_U, _K);
+        
+        let map, userPos, userMarker, clusterGroup;
+        let activeIds = new Set();
+        let isFirstLoad = true;
 
         function init() {
-            // Inicialización con centro neutro
+            // Evitar reinicialización si ya existe
+            if (map) return;
+
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([29.4, -110.9], 15);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19
+            }).addTo(map);
             
             clusterGroup = L.markerClusterGroup({
-                maxClusterRadius: 40,
+                maxClusterRadius: 50,
                 spiderfyOnMaxZoom: true,
-                showCoverageOnHover: false,
-                zoomToBoundsOnClick: true
+                iconCreateFunction: function(cluster) {
+                    return L.divIcon({ 
+                        html: '<div>' + cluster.getChildCount() + '</div>', 
+                        className: 'marker-cluster-custom', 
+                        iconSize: L.point(40, 40) 
+                    });
+                }
             });
             map.addLayer(clusterGroup);
 
-            // Localización: setView: false es lo que impide que la cámara salte sola
             map.locate({ setView: false, watch: true, enableHighAccuracy: true });
             
             map.on('locationfound', e => {
                 userPos = e.latlng;
                 document.getElementById('record-btn').disabled = false;
-                
                 if (!userMarker) {
                     userMarker = L.marker(e.latlng, { icon: L.divIcon({ className: 'user-dot' }) }).addTo(map);
-                } else {
-                    userMarker.setLatLng(e.latlng);
-                }
+                } else userMarker.setLatLng(e.latlng);
 
-                // Solo centramos la cámara la primerísima vez que abre la app
-                if (firstLoad) {
-                    map.panTo(e.latlng);
-                    firstLoad = false;
+                if (isFirstLoad) {
+                    map.setView(e.latlng, 16);
+                    isFirstLoad = false;
                 }
             });
 
-            // Buscador Reparado
+            // Buscador corregido
             const sInp = document.getElementById('search-input');
             const rBox = document.getElementById('results-box');
             
             sInp.addEventListener('input', debounce(async () => {
                 const q = sInp.value;
                 if (q.length < 3) { rBox.style.display = 'none'; return; }
-                
-                const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5${userPos ? `&lat=${userPos.lat}&lon=${userPos.lng}` : ''}`;
-                const res = await fetch(url);
-                const data = await res.json();
-                
-                rBox.
+                try {
+                    const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5`);
+                    const data = await res.json();
+                    rBox.innerHTML = '';
+                    if (data.features.length) {
+                        rBox.style.display = 'block';
+                        data.features.forEach(f => {
+                            const d = document.createElement('div');
+                            d.className = 'res-item';
+                            d.innerHTML = `<b>${f.properties.name || ''}</b> <br> <span class="text-xs">${f.properties.city || ''}</span>`;
+                            d.onclick = () => {
+                                map.flyTo([f.geometry.coordinates[1], f.geometry.coordinates[0]], 17);
+                                rBox.style.display = 'none';
+                                sInp.value = f.properties.name;
+                            };
+                            rBox.appendChild(d);
+                        });
+                    }
+                } catch(e) { console.error("Error búsqueda", e); }
+            }, 500));
+
+            document.querySelector('emoji-picker').addEventListener('emoji-click', e => sendEmoji(e.detail.unicode));
+            
+            loadData();
+            setInterval(loadData, 15000);
+        }
+
+        function handleX() {
+            if (userPos) {
+                map.flyTo(userPos, 18);
+                document.getElementById('emoji-container').classList.add('active');
+            }
+        }
+
+        function closePanel() { document.getElementById('emoji-container').classList.remove('active'); }
+
+        async function sendEmoji(emoji) {
+            const { error } = await _S.from('marcas').insert([{ 
+                emoji, latitud: userPos.lat, longitud: userPos.lng, 
+                expira_en: new Date(Date.now() + 259200000).toISOString() 
+            }]);
+            if (!error) { loadData(); closePanel(); }
+        }
+
+        async function loadData() {
+            const { data, error } = await _S.from('marcas').select('*').gt('expira_en', new Date().toISOString());
+            if (error) return;
+            
+            let newBatch = [];
+            data.forEach(m => {
+                if (!activeIds.has(m.id)) {
+                    const mark = L.marker([m.latitud, m.longitud], { 
+                        icon: L.divIcon({ html: `<div style="font-size:30px">${m.emoji}</div>`, className: 'p' }) 
+                    });
+                    newBatch.push(mark);
+                    activeIds.add(m.id);
+                }
+            });
+            if (newBatch.length > 0) clusterGroup.addLayers(newBatch);
+        }
+
+        function debounce(f, t) { let tm; return (...a) => { clearTimeout(tm); tm = setTimeout(() => f.apply(this, a), t); }; }
+        
+        window.onload = init;
+    </script>
+</body>
+</html>
