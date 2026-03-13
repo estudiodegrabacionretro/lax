@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>LA X - FULL EMOJIS</title>
+    <title>LA X - VISIBILIDAD TOTAL</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -24,21 +24,26 @@
         /* BUSCADOR */
         .search-container { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 92%; z-index: 5000; }
         #search-input { width: 100%; padding: 16px; border-radius: 15px; border: none; box-shadow: 0 4px 25px rgba(0,0,0,0.3); outline: none; font-size: 16px; }
-        #results-box { background: white; border-radius: 0 0 15px 15px; margin-top: 2px; display: none; max-height: 200px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .res-item { padding: 14px; border-bottom: 1px solid #eee; color: #1e293b; font-size: 14px; }
 
         /* BOTÓN X */
-        .btn-main { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 85px; height: 85px; border-radius: 50%; background: var(--accent); color: white; font-size: 2.5rem; z-index: 2000; border: 4px solid #3b82f6; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+        .btn-main { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 85px; height: 85px; border-radius: 50%; background: var(--accent); color: white; font-size: 2.5rem; z-index: 2000; border: 4px solid #3b82f6; box-shadow: 0 10px 30px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; font-weight: bold; }
         
-        /* PANEL DE EMOJIS COMPLETO */
-        #emoji-container { position: fixed; bottom: -100%; left: 0; width: 100%; height: 60%; background: white; z-index: 6000; transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 30px 30px 0 0; display: flex; flex-direction: column; }
+        /* PANEL DE EMOJIS - MEJORADO */
+        #emoji-container { position: fixed; bottom: -100%; left: 0; width: 100%; height: 70%; background: white; z-index: 6000; transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 30px 30px 0 0; display: flex; flex-direction: column; box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
         #emoji-container.active { bottom: 0; }
-        emoji-picker { width: 100%; height: 100%; }
+        
+        /* Personalización del picker para que los iconos sean GRANDES */
+        emoji-picker { 
+            width: 100%; 
+            height: 100%; 
+            --num-columns: 6;
+            --emoji-size: 2.2rem; 
+        }
 
-        .user-dot { width: 14px; height: 14px; background: #3b82f6; border: 2px solid white; border-radius: 50%; }
+        .user-dot { width: 16px; height: 16px; background: #3b82f6; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px #3b82f6; }
         
         /* NUBES (CLUSTERS) */
-        .marker-cluster-custom { background: rgba(15, 23, 42, 0.95); border: 2px solid white; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .marker-cluster-custom { background: rgba(15, 23, 42, 0.95); border: 2px solid #3b82f6; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
@@ -46,17 +51,112 @@
     <div id="map"></div>
 
     <div class="search-container">
-        <input type="text" id="search-input" placeholder="🔍 Escribe una dirección y presiona Enter..." autocomplete="off">
-        <div id="results-box"></div>
+        <input type="text" id="search-input" placeholder="🔍 Buscar dirección y Enter..." autocomplete="off">
     </div>
 
     <button id="record-btn" class="btn-main" onclick="handleX()">X</button>
 
     <div id="emoji-container">
-        <div style="width:40px; height:5px; background:#ccc; margin:12px auto; border-radius:5px" onclick="closePanel()"></div>
+        <div style="width:50px; height:6px; background:#ddd; margin:15px auto; border-radius:5px" onclick="closePanel()"></div>
         <emoji-picker id="picker"></emoji-picker>
     </div>
 
     <script>
         const _U = "https://echdpjhzjsaqtvdrkgaj.supabase.co", 
-              _K = "sb_publishable_j_v0LqOm9jcYqh4NAH9IDg_dVo
+              _K = "sb_publishable_j_v0LqOm9jcYqh4NAH9IDg_dVoOVi8s", 
+              _S = supabase.createClient(_U, _K);
+
+        let map, userPos, userMarker, clusterGroup, activeIds = new Set();
+        let isFirstLoad = true;
+
+        function init() {
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([29.4, -110.9], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+            clusterGroup = L.markerClusterGroup({
+                maxClusterRadius: 30, // Reducido para que se vean más iconos individuales antes de agruparse
+                spiderfyOnMaxZoom: true,
+                iconCreateFunction: (c) => L.divIcon({ html: '<div>'+c.getChildCount()+'</div>', className: 'marker-cluster-custom', iconSize: [40,40] })
+            });
+            map.addLayer(clusterGroup);
+
+            map.locate({ setView: false, watch: true, enableHighAccuracy: true });
+            map.on('locationfound', e => {
+                userPos = e.latlng;
+                if (!userMarker) userMarker = L.marker(e.latlng, { icon: L.divIcon({ className: 'user-dot' }) }).addTo(map);
+                else userMarker.setLatLng(e.latlng);
+                
+                if (isFirstLoad) { map.panTo(e.latlng); isFirstLoad = false; }
+            });
+
+            // Buscador con Enter
+            const sInp = document.getElementById('search-input');
+            sInp.addEventListener('keypress', async (e) => {
+                if(e.key === 'Enter') {
+                    try {
+                        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(sInp.value)}&limit=1`);
+                        const data = await res.json();
+                        if(data.features.length) {
+                            const [lon, lat] = data.features[0].geometry.coordinates;
+                            map.flyTo([lat, lon], 17);
+                        }
+                    } catch(err) { console.error("Error búsqueda", err); }
+                }
+            });
+
+            // Listener de Emojis con validación extra
+            document.querySelector('emoji-picker').addEventListener('emoji-click', e => {
+                if (e.detail && e.detail.unicode) {
+                    sendEmoji(e.detail.unicode);
+                }
+            });
+
+            loadData();
+            setInterval(loadData, 12000);
+        }
+
+        function handleX() {
+            if (userPos) map.panTo(userPos);
+            document.getElementById('emoji-container').classList.add('active');
+        }
+
+        function closePanel() { document.getElementById('emoji-container').classList.remove('active'); }
+
+        async function sendEmoji(emoji) {
+            if(!userPos) return alert("Esperando señal GPS...");
+            const { error } = await _S.from('marcas').insert([{ 
+                emoji, latitud: userPos.lat, longitud: userPos.lng, 
+                expira_en: new Date(Date.now() + 259200000).toISOString() 
+            }]);
+            if (!error) { 
+                loadData(); 
+                closePanel(); 
+            } else {
+                console.error("Error Supabase:", error);
+            }
+        }
+
+        async function loadData() {
+            const { data, error } = await _S.from('marcas').select('*').gt('expira_en', new Date().toISOString());
+            if (error) return;
+            
+            let batch = [];
+            data.forEach(m => {
+                if (!activeIds.has(m.id)) {
+                    const mark = L.marker([m.latitud, m.longitud], { 
+                        icon: L.divIcon({ 
+                            html: `<div style="font-size:32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5))">${m.emoji}</div>`, 
+                            className: 'p' 
+                        }) 
+                    });
+                    batch.push(mark);
+                    activeIds.add(m.id);
+                }
+            });
+            if (batch.length) clusterGroup.addLayers(batch);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
