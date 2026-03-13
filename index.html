@@ -2,79 +2,61 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DIAGNÓSTICO LA X</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>LA X - FULL EMOJIS</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1/index.js"></script>
     
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; background: #111; color: white; font-family: sans-serif; }
-        #map { height: 100%; width: 100%; position: absolute; z-index: 1; }
-        #debug-log { 
-            position: absolute; top: 10px; left: 10px; right: 10px; 
-            background: rgba(0,0,0,0.8); color: #0f0; font-family: monospace; 
-            font-size: 10px; padding: 10px; z-index: 9999; pointer-events: none;
-            border: 1px solid #0f0; max-height: 150px; overflow-y: auto;
-        }
-        .error-msg { color: #ff4444; font-weight: bold; }
-        .status-ui { position: absolute; bottom: 20px; left: 20px; z-index: 1000; background: black; padding: 10px; border-radius: 8px; border: 1px solid #333; }
+        :root { --accent: #0f172a; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
+        
+        #map { position: absolute; inset: 0; z-index: 1; background: #111; }
+        
+        /* BUSCADOR */
+        .search-container { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 92%; z-index: 5000; }
+        #search-input { width: 100%; padding: 16px; border-radius: 15px; border: none; box-shadow: 0 4px 25px rgba(0,0,0,0.3); outline: none; font-size: 16px; }
+        #results-box { background: white; border-radius: 0 0 15px 15px; margin-top: 2px; display: none; max-height: 200px; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .res-item { padding: 14px; border-bottom: 1px solid #eee; color: #1e293b; font-size: 14px; }
+
+        /* BOTÓN X */
+        .btn-main { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 85px; height: 85px; border-radius: 50%; background: var(--accent); color: white; font-size: 2.5rem; z-index: 2000; border: 4px solid #3b82f6; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+        
+        /* PANEL DE EMOJIS COMPLETO */
+        #emoji-container { position: fixed; bottom: -100%; left: 0; width: 100%; height: 60%; background: white; z-index: 6000; transition: 0.4s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 30px 30px 0 0; display: flex; flex-direction: column; }
+        #emoji-container.active { bottom: 0; }
+        emoji-picker { width: 100%; height: 100%; }
+
+        .user-dot { width: 14px; height: 14px; background: #3b82f6; border: 2px solid white; border-radius: 50%; }
+        
+        /* NUBES (CLUSTERS) */
+        .marker-cluster-custom { background: rgba(15, 23, 42, 0.95); border: 2px solid white; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div id="debug-log">Iniciando sistema de diagnóstico...<br></div>
     <div id="map"></div>
-    <div class="status-ui" id="status-ui">Estado: Esperando...</div>
+
+    <div class="search-container">
+        <input type="text" id="search-input" placeholder="🔍 Escribe una dirección y presiona Enter..." autocomplete="off">
+        <div id="results-box"></div>
+    </div>
+
+    <button id="record-btn" class="btn-main" onclick="handleX()">X</button>
+
+    <div id="emoji-container">
+        <div style="width:40px; height:5px; background:#ccc; margin:12px auto; border-radius:5px" onclick="closePanel()"></div>
+        <emoji-picker id="picker"></emoji-picker>
+    </div>
 
     <script>
-        const log = (msg, isError = false) => {
-            const div = document.getElementById('debug-log');
-            div.innerHTML += `<span class="${isError ? 'error-msg' : ''}">${new Date().toLocaleTimeString()}: ${msg}</span><br>`;
-            div.scrollTop = div.scrollHeight;
-        };
-
-        const _U = "https://echdpjhzjsaqtvdrkgaj.supabase.co";
-        const _K = "sb_publishable_j_v0LqOm9jcYqh4NAH9IDg_dVoOVi8s";
-        let map, _S;
-
-        window.onerror = (msg) => log("ERROR GLOBAL: " + msg, true);
-
-        async function start() {
-            log("1. Conectando a Supabase...");
-            try {
-                _S = supabase.createClient(_U, _K);
-                const { data, error } = await _S.from('marcas').select('id').limit(1);
-                if (error) throw error;
-                log("CONEXIÓN SUPABASE: OK");
-            } catch (e) {
-                log("FALLO SUPABASE: " + e.message, true);
-                document.getElementById('status-ui').innerHTML = "Estado: ERROR SUPABASE";
-            }
-
-            log("2. Cargando Mapa (Leaflet)...");
-            try {
-                map = L.map('map', { zoomControl: false }).setView([29.4, -110.9], 13);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-                log("MAPA: OK");
-            } catch (e) {
-                log("FALLO MAPA: " + e.message, true);
-            }
-
-            log("3. Buscando GPS...");
-            map.locate({ setView: true, maxZoom: 16 });
-            map.on('locationfound', () => {
-                log("GPS: LOCALIZADO");
-                document.getElementById('status-ui').innerHTML = "Estado: GPS OK";
-            });
-            map.on('locationerror', (e) => {
-                log("FALLO GPS: " + e.message, true);
-                document.getElementById('status-ui').innerHTML = "Estado: ERROR GPS";
-            });
-        }
-
-        window.onload = start;
-    </script>
-</body>
-</html>
+        const _U = "https://echdpjhzjsaqtvdrkgaj.supabase.co", 
+              _K = "sb_publishable_j_v0LqOm9jcYqh4NAH9IDg_dVo
