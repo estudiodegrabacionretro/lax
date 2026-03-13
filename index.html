@@ -3,75 +3,246 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>LA X - CLOUD MODE</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>LA X - INSTANT EMOJIS</title>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1/index.js"></script>
+    
     <style>
-        :root { --accent: #0f172a; }
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
-        #map { position: absolute; inset: 0; z-index: 1; filter: saturate(0.8); }
-        .user-dot { width: 14px; height: 14px; background: #3b82f6; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
-        
-        /* Estilo de la "Nube" de grupo */
-        .marker-cluster-small { background-color: rgba(30, 41, 59, 0.6); }
-        .marker-cluster-small div { background-color: rgba(30, 41, 59, 0.9); color: white; font-weight: bold; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
+        #map { position: absolute; inset: 0; z-index: 1; background: #111; }
 
-        .search-container { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 92%; z-index: 2000; }
-        #search-input { width: 100%; padding: 15px; border-radius: 15px; border: none; box-shadow: 0 4px 20px rgba(0,0,0,0.2); outline: none; }
-        
-        .btn-main { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 85px; height: 85px; border-radius: 50%; background: var(--accent); color: white; font-size: 2.5rem; z-index: 1500; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
-        
-        #emoji-container { position: fixed; bottom: -100%; left: 0; width: 100%; height: 60%; background: white; z-index: 4000; transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 30px 30px 0 0; }
+        .btn-main { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); width: 85px; height: 85px; border-radius: 50%; background: #0f172a; color: white; font-size: 2.5rem; z-index: 2000; border: 4px solid #3b82f6; box-shadow: 0 10px 30px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; }
+
+        #emoji-container {
+            position: fixed; bottom: -100%; left: 0; width: 100%; height: 72%;
+            background: #16213e; z-index: 6000;
+            transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            border-radius: 24px 24px 0 0;
+            display: flex; flex-direction: column;
+            box-shadow: 0 -8px 40px rgba(0,0,0,0.6);
+        }
         #emoji-container.active { bottom: 0; }
-        emoji-picker { width: 100%; height: 100%; }
-        
-        .loading-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.8); z-index: 5000; display: none; align-items: center; justify-content: center; border-radius: 30px 30px 0 0; }
+
+        .panel-handle { width: 44px; height: 5px; background: #2e4070; border-radius: 3px; margin: 12px auto 8px; flex-shrink: 0; cursor: pointer; }
+
+        #emoji-search {
+            margin: 0 12px 8px; padding: 10px 14px;
+            border-radius: 12px; border: none;
+            background: #0f172a; color: #e2e8f0;
+            font-size: 15px; outline: none;
+            flex-shrink: 0;
+        }
+        #emoji-search::placeholder { color: #475569; }
+
+        #cat-tabs {
+            display: flex; overflow-x: auto; scrollbar-width: none;
+            border-bottom: 1px solid #1e3060; flex-shrink: 0;
+            padding: 0 8px;
+        }
+        #cat-tabs::-webkit-scrollbar { display: none; }
+        .cat-tab {
+            flex-shrink: 0; padding: 8px 10px; font-size: 1.4rem;
+            cursor: pointer; opacity: 0.35; transition: opacity 0.15s;
+            border-bottom: 2px solid transparent;
+        }
+        .cat-tab.active { opacity: 1; border-bottom-color: #3b82f6; }
+
+        #emoji-scroll {
+            flex: 1; overflow-y: auto; padding: 4px 8px 20px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin; scrollbar-color: #2e4070 transparent;
+        }
+        .cat-section { margin-bottom: 4px; }
+        .cat-label {
+            font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+            color: #3b5280; padding: 8px 4px 4px; font-weight: 700;
+        }
+        .emoji-row {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 0;
+        }
+        .emoji-item {
+            font-size: 1.75rem; text-align: center; cursor: pointer;
+            padding: 5px 2px; border-radius: 8px;
+            transition: background 0.1s;
+            display: flex; align-items: center; justify-content: center;
+            user-select: none;
+        }
+        .emoji-item:active { background: rgba(59,130,246,0.25); transform: scale(1.25); }
+
+        .user-dot { width: 16px; height: 16px; background: #3b82f6; border: 3px solid white; border-radius: 50%; }
+        .marker-cluster-custom { background: #0f172a; border: 2px solid #3b82f6; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
     </style>
 </head>
 <body>
+
     <div id="map"></div>
-    <div class="search-container">
-        <input type="text" id="search-input" placeholder="🔍 Buscar lugar..." autocomplete="off">
-    </div>
-    <button id="record-btn" class="btn-main" onclick="handleX()" disabled>X</button>
+
+    <button id="record-btn" class="btn-main" onclick="handleX()">X</button>
+
     <div id="emoji-container">
-        <div id="loader" class="loading-overlay"><b>ENVIANDO...</b></div>
-        <div style="width:40px; height:5px; background:#ccc; margin:12px auto; border-radius:5px" onclick="closePanel()"></div>
-        <emoji-picker id="picker"></emoji-picker>
+        <div class="panel-handle" onclick="closePanel()"></div>
+        <input type="text" id="emoji-search" placeholder="🔍 Buscar emoji...">
+        <div id="cat-tabs"></div>
+        <div id="emoji-scroll"></div>
     </div>
 
     <script>
-        const _U = "https://echdpjhzjsaqtvdrkgaj.supabase.co", _K = "sb_publishable_j_v0LqOm9jcYqh4NAH9IDg_dVoOVi8s", _S = supabase.createClient(_U, _K);
-        let map, userPos, userMarker, markerCluster;
-        let activeMarkers = new Set(); // Para no duplicar
+        const _U = "https://echdpjhzjsaqtvdrkgaj.supabase.co",
+              _K = "sb_publishable_j_v0LqOm9jcYqh4NAH9IDg_dVoOVi8s",
+              _S = supabase.createClient(_U, _K);
+
+        let map, userPos, userMarker, clusterGroup, activeIds = new Set();
+        let isFirstLoad = true;
+
+        const EMOJI_CATS = [
+            { icon: '⭐', label: 'Frecuentes', emojis: ['🔥','⚠️','📍','🐾','🦌','💧','⛺','🏠','🚨','✅','❌','🆘'] },
+            { icon: '😀', label: 'Caritas', emojis: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾'] },
+            { icon: '👋', label: 'Personas', emojis: ['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🫀','🫁','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸'] },
+            { icon: '🐶', label: 'Animales', emojis: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🦅','🦆','🦢','🦉','🦚','🦜','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🦟','🦗','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🦣','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🦬','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐈','🐓','🦃','🦤','🦚','🦩','🦢','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿️','🦔'] },
+            { icon: '🌵', label: 'Naturaleza', emojis: ['🌵','🎄','🌲','🌳','🌴','🪵','🌱','🌿','☘️','🍀','🎍','🪴','🎋','🍃','🍂','🍁','🪺','🪹','🍄','🌾','💐','🌷','🌹','🥀','🌺','🌸','🌼','🌻','🌞','🌝','🌛','🌜','🌚','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌙','🌟','⭐','🌠','🌌','☁️','⛅','🌤️','🌥️','🌦️','🌧️','⛈️','🌩️','🌨️','❄️','☃️','⛄','🌬️','💨','🌀','🌈','🌂','☂️','☔','⛱️','⚡','❄️','🔥','💧','🌊','🫧'] },
+            { icon: '🍕', label: 'Comida', emojis: ['🍎','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🫒','🥑','🍆','🥔','🥕','🌽','🌶️','🫑','🥦','🧄','🧅','🥜','🫘','🍞','🥐','🥖','🫓','🥨','🧀','🥚','🍳','🧈','🥞','🧇','🥓','🥩','🍗','🍖','🦴','🌭','🍔','🍟','🍕','🫔','🌮','🌯','🥙','🧆','🥚','🍿','🧂','🥫','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🦀','🦞','🦐','🍣','🍤','🍙','🥟','🦪','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯','🍼','🥛','☕','🫖','🍵','🧃','🥤','🧋','🍶','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🧉','🍾'] },
+            { icon: '🚗', label: 'Transporte', emojis: ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🏍️','🛵','🚲','🛴','🛹','🛼','🚏','🛣️','🛤️','⛽','🚧','🚦','🚥','🛑','⚓','🛶','⛵','🚤','🛥️','🛳️','⛴️','🚢','✈️','🛩️','🛫','🛬','🛰️','🚀','🛸','🚁','🛺','🚂','🚃','🚄','🚅','🚆','🚇','🚈','🚉','🚊','🚝','🚞','🚋','🚌','🚍','🚎','🚐','🚑','🚒'] },
+            { icon: '⚽', label: 'Actividades', emojis: ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥅','⛳','🪁','🏹','🎣','🤿','🎽','🎿','🛷','🥌','🎯','🪃','🏋️','🤸','🤺','🏇','⛷️','🏂','🪂','🤼','🤽','🤾','🏌️','🧘','🛀','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖️','🏵️','🎗️','🎫','🎟️','🎪','🤹','🎭','🩰','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🪘','🎷','🎺','🎸','🪕','🎻','🎲','♟️','🎯','🎳','🎮','🕹️'] },
+            { icon: '🏠', label: 'Lugares', emojis: ['🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏭','🏗️','🧱','🪨','🪵','🛖','🏘️','🏚️','🏰','🏯','🏟️','🗼','🗽','⛪','🕌','🛕','🕍','⛩️','🗾','🎑','🏞️','🌅','🌄','🌠','🎇','🎆','🌇','🌆','🏙️','🌃','🌌','🌉','🌁','🗺️','🧭','🏔️','⛰️','🌋','🗻','🏕️','🏖️','🏜️','🏝️','🏛️'] },
+            { icon: '💡', label: 'Objetos', emojis: ['💡','🔦','🕯️','🪔','🧯','🛢️','💰','💳','💎','⚖️','🔑','🗝️','🔨','🪓','⛏️','⚒️','🛠️','🗡️','⚔️','🛡️','🪚','🔧','🪛','🔩','⚙️','🗜️','⚗️','🧪','🧫','🧬','🔬','🔭','📡','💊','🩺','🩻','🩹','🩼','🌡️','🧲','🪜','🪝','🔋','🔌','💻','🖥️','📱','📲','📷','📸','📹','🎥','📞','☎️','📟','📠','📺','📻','🧭','⏰','⌚','⏱️','⏲️','🕰️','⌛','⏳','📡','🔋','🪫','🔌'] },
+            { icon: '❤️', label: 'Símbolos', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','⚕️','♻️','⚜️','🔱','📛','🔰','⭕','✅','☑️','✔️','❌','❎','➕','➖','➗','✖️','🟰','♾️','💲','💱','‼️','⁉️','❓','❔','❕','❗','〰️','🔅','🔆','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','🔷','🔶','🔹','🔸','🔲','🔳','▪️','▫️','◾','◽','◼️','◻️'] },
+            { icon: '🚩', label: 'Banderas', emojis: ['🏁','🚩','🎌','🏴','🏳️','🏴‍☠️','🇲🇽','🇺🇸','🇨🇦','🇬🇧','🇫🇷','🇩🇪','🇪🇸','🇧🇷','🇦🇷','🇨🇴','🇨🇱','🇵🇪','🇻🇪','🇨🇺','🇯🇵','🇨🇳','🇰🇷','🇮🇳','🇷🇺','🇮🇹','🇵🇹','🇳🇱','🇧🇪','🇨🇭','🇸🇪','🇳🇴','🇩🇰','🇵🇱','🇺🇦','🇮🇱','🇸🇦','🇦🇪','🇹🇷','🇬🇷','🇦🇺','🇳🇿','🇿🇦','🇳🇬','🇰🇪','🇪🇬','🇲🇦'] },
+        ];
 
         function init() {
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([29.4, -110.9], 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            
-            // Inicializar el grupo de "Nubes"
-            markerCluster = L.markerClusterGroup({
-                spiderfyOnMaxZoom: true, // Abre los emojis en abanico al llegar al máximo zoom
-                showCoverageOnHover: false,
-                zoomToBoundsOnClick: true
+
+            clusterGroup = L.markerClusterGroup({
+                maxClusterRadius: 35,
+                spiderfyOnMaxZoom: true,
+                iconCreateFunction: (c) => L.divIcon({ html: '<div>'+c.getChildCount()+'</div>', className: 'marker-cluster-custom', iconSize: [40,40] })
             });
-            map.addLayer(markerCluster);
+            map.addLayer(clusterGroup);
+
+            buildEmojiPanel();
 
             map.locate({ setView: false, watch: true, enableHighAccuracy: true });
             map.on('locationfound', e => {
                 userPos = e.latlng;
-                document.getElementById('record-btn').disabled = false;
-                if (!userMarker) {
-                    userMarker = L.marker(e.latlng, { icon: L.divIcon({ className: 'user-dot' }) }).addTo(map);
-                    map.panTo(e.latlng);
-                } else { userMarker.setLatLng(e.latlng); }
+                if (!userMarker) userMarker = L.marker(e.latlng, { icon: L.divIcon({ className: 'user-dot' }) }).addTo(map);
+                else userMarker.setLatLng(e.latlng);
+                if (isFirstLoad) { map.panTo(e.latlng); isFirstLoad = false; }
             });
 
-            document.querySelector('emoji-picker').
+            document.getElementById('emoji-search').addEventListener('input', (e) => {
+                filterEmojis(e.target.value.trim());
+            });
+
+            loadData();
+            setInterval(loadData, 10000);
+        }
+
+        function buildEmojiPanel() {
+            const tabsEl = document.getElementById('cat-tabs');
+            const scrollEl = document.getElementById('emoji-scroll');
+            tabsEl.innerHTML = '';
+            scrollEl.innerHTML = '';
+
+            EMOJI_CATS.forEach((cat, idx) => {
+                const tab = document.createElement('div');
+                tab.className = 'cat-tab' + (idx === 0 ? ' active' : '');
+                tab.textContent = cat.icon;
+                tab.title = cat.label;
+                tab.onclick = () => {
+                    document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById('sec-' + idx)?.scrollIntoView({ behavior: 'smooth' });
+                };
+                tabsEl.appendChild(tab);
+
+                const sec = document.createElement('div');
+                sec.className = 'cat-section';
+                sec.id = 'sec-' + idx;
+
+                const lbl = document.createElement('div');
+                lbl.className = 'cat-label';
+                lbl.textContent = cat.label;
+                sec.appendChild(lbl);
+
+                const row = document.createElement('div');
+                row.className = 'emoji-row';
+                cat.emojis.forEach(emoji => row.appendChild(makeEmojiEl(emoji)));
+                sec.appendChild(row);
+                scrollEl.appendChild(sec);
+            });
+        }
+
+        function makeEmojiEl(emoji) {
+            const el = document.createElement('div');
+            el.className = 'emoji-item';
+            el.textContent = emoji;
+            el.onclick = () => sendEmoji(emoji);
+            return el;
+        }
+
+        function filterEmojis(query) {
+            const scrollEl = document.getElementById('emoji-scroll');
+            scrollEl.innerHTML = '';
+            if (!query) { buildEmojiPanel(); return; }
+            const all = EMOJI_CATS.flatMap(c => c.emojis);
+            const row = document.createElement('div');
+            row.className = 'emoji-row';
+            all.forEach(e => row.appendChild(makeEmojiEl(e)));
+            scrollEl.appendChild(row);
+        }
+
+        function handleX() {
+            if (userPos) map.panTo(userPos);
+            document.getElementById('emoji-container').classList.add('active');
+        }
+
+        function closePanel() {
+            document.getElementById('emoji-container').classList.remove('active');
+            document.getElementById('emoji-search').value = '';
+            buildEmojiPanel();
+        }
+
+        async function sendEmoji(emoji) {
+            if (!userPos) { alert('GPS aún no disponible.'); return; }
+            map.flyTo(userPos, 16);
+            const { error } = await _S.from('marcas').insert([{
+                emoji,
+                latitud: userPos.lat,
+                longitud: userPos.lng,
+                expira_en: new Date(Date.now() + 259200000).toISOString()
+            }]);
+            if (error) { console.error(error); alert('Error: ' + error.message); return; }
+            loadData();
+            closePanel();
+        }
+
+        async function loadData() {
+            const { data } = await _S.from('marcas').select('*').gt('expira_en', new Date().toISOString());
+            if (data) {
+                let batch = [];
+                data.forEach(m => {
+                    if (!activeIds.has(m.id)) {
+                        batch.push(L.marker([m.latitud, m.longitud], {
+                            icon: L.divIcon({ html: '<div style="font-size:32px">'+m.emoji+'</div>', className: 'p' })
+                        }));
+                        activeIds.add(m.id);
+                    }
+                });
+                if (batch.length) clusterGroup.addLayers(batch);
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
