@@ -3,51 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>LA X - INSTANT EMOJIS</title>
+    <title>LA X - RECUERADO</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
         #map { position: absolute; inset: 0; z-index: 1; background: #111; }
-
         #btn-x {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
             width: 80px; height: 80px; background: #007bff; color: white;
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
             font-size: 40px; font-weight: bold; cursor: pointer; z-index: 10;
             box-shadow: 0 0 20px rgba(0,123,255,0.6); border: 4px solid #fff;
-            transition: transform 0.2s;
         }
-        #btn-x:active { transform: translateX(-50%) scale(0.9); }
-
         #emoji-container {
             position: absolute; bottom: -100%; left: 0; width: 100%; height: 75%;
-            background: #1a1a1a; z-index: 20; transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 25px 25px 0 0; display: flex; flex-direction: column;
-            color: white; border-top: 1px solid #333;
+            background: #1a1a1a; z-index: 20; transition: bottom 0.3s ease;
+            border-radius: 25px 25px 0 0; display: flex; flex-direction: column; color: white;
         }
         #emoji-container.active { bottom: 0; }
-
         .handle { width: 40px; height: 5px; background: #555; border-radius: 10px; margin: 12px auto; }
-        #search-box { padding: 0 15px 10px; }
-        #emoji-search { width: 100%; padding: 12px; border-radius: 10px; border: none; background: #333; color: white; font-size: 16px; outline: none; }
-
-        #tabs { display: flex; overflow-x: auto; padding: 5px 10px; gap: 10px; border-bottom: 1px solid #333; scrollbar-width: none; }
-        #tabs::-webkit-scrollbar { display: none; }
-        .tab { padding: 8px 15px; border-radius: 20px; background: #333; white-space: nowrap; cursor: pointer; font-size: 14px; }
-        .tab.active { background: #007bff; }
-
-        #emoji-list { flex: 1; overflow-y: auto; padding: 15px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; align-content: start; }
-        .emoji-item { font-size: 32px; display: flex; align-items: center; justify-content: center; aspect-ratio: 1; cursor: pointer; border-radius: 10px; }
-        .p { background: none; border: none; }
+        #emoji-list { flex: 1; overflow-y: auto; padding: 15px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+        .emoji-item { font-size: 32px; text-align: center; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -56,119 +37,52 @@
     <div id="btn-x">X</div>
 
     <div id="emoji-container">
-        <div class="handle" onclick="closePanel()"></div>
-        <div id="search-box">
-            <input type="text" id="emoji-search" placeholder="Buscar emoji...">
-        </div>
-        <div id="tabs"></div>
+        <div class="handle" onclick="document.getElementById('emoji-container').classList.remove('active')"></div>
         <div id="emoji-list"></div>
     </div>
 
     <script>
-        // DATOS DE CONEXIÓN REALES
         const _U = "https://echdpjhzjsaqtvdrkgaj.supabase.co";
         const _K = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjaGRwamh6anNhcXR2ZHJrZ2FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTA2NTYsImV4cCI6MjA4ODk4NjY1Nn0.8_E_jXsoA8JSgQ-PSNRNc-vqePqFeEDWHiy5YFgc8oo";
-        const _S = supabase.createClient(_U, _K);
+        
+        let _S;
+        try { _S = supabase.createClient(_U, _K); } catch (e) { console.error("Error base datos"); }
 
-        let map, userPos, userMarker, clusterGroup, activeIds = new Set();
-        let currentTab = 'Frecuentes';
-
-        const EMOJI_CATS = [
-            { icon: '⭐', label: 'Frecuentes', emojis: ['🔥','⚠️','📍','🐾','🦌','💧','🏠','🚨','✅','🆘'] },
-            { icon: '🚩', label: 'Banderas', emojis: ['🇲🇽','🇬🇹','🇸🇻','🇭🇳','🇳🇮','🇨🇷','🇵🇦','🇨🇺','🇩🇴','🇵🇷','🇨🇴','🇻🇪','🇪🇨','🇵🇪','🇧🇴','🇵🇾','🇨🇱','🇦🇷','🇺🇾','🇧🇷'] },
-            { icon: '😀', label: 'Caras', emojis: ['😀','😃','😄','😁','😆','😅','😂','🙂','😉','😊','😇','🥰','😍','🤩','😘','😋','😛','😜','🤪','😎','🥳','🥺','😭'] }
-        ];
+        let map, userPos;
 
         function init() {
-            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([23, -102], 5);
+            // EL MAPA CARGA PRIMERO SIEMPRE
+            map = L.map('map', { zoomControl: false }).setView([23, -102], 5);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-            
-            clusterGroup = L.markerClusterGroup({ showCoverageOnHover: false });
-            map.addLayer(clusterGroup);
 
             if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(p => {
+                navigator.geolocation.getCurrentPosition(p => {
                     userPos = { lat: p.coords.latitude, lng: p.coords.longitude };
-                    if (!userMarker) {
-                        userMarker = L.circleMarker([userPos.lat, userPos.lng], { radius: 8, color: '#fff', fillColor: '#007bff', fillOpacity: 1 }).addTo(map);
-                        map.setView([userPos.lat, userPos.lng], 15);
-                    } else {
-                        userMarker.setLatLng([userPos.lat, userPos.lng]);
-                    }
-                }, null, { enableHighAccuracy: true });
+                    map.setView([userPos.lat, userPos.lng], 15);
+                    L.circleMarker([userPos.lat, userPos.lng], { radius: 8, color: '#fff', fillColor: '#007bff', fillOpacity: 1 }).addTo(map);
+                });
             }
 
-            document.getElementById('btn-x').onclick = () => document.getElementById('emoji-container').classList.add('active');
-            document.getElementById('emoji-search').oninput = (e) => buildEmojiPanel(e.target.value);
+            document.getElementById('btn-x').onclick = () => {
+                document.getElementById('emoji-container').classList.add('active');
+            };
 
-            buildTabs();
-            buildEmojiPanel();
-            loadData();
-            setInterval(loadData, 10000);
-        }
-
-        function buildTabs() {
-            const t = document.getElementById('tabs');
-            EMOJI_CATS.forEach(c => {
-                const div = document.createElement('div');
-                div.className = `tab ${c.label === currentTab ? 'active' : ''}`;
-                div.innerText = `${c.icon} ${c.label}`;
-                div.onclick = () => {
-                    currentTab = c.label;
-                    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-                    div.classList.add('active');
-                    buildEmojiPanel();
-                };
-                t.appendChild(div);
-            });
-        }
-
-        function buildEmojiPanel(filter = '') {
-            const l = document.getElementById('emoji-list');
-            l.innerHTML = '';
-            let list = filter ? [].concat(...EMOJI_CATS.map(c => c.emojis)).filter(e => e.includes(filter)) : EMOJI_CATS.find(c => c.label === currentTab).emojis;
+            const list = ['🔥','⚠️','📍','🐾','🦌','💧','🏠','🚨','✅','🆘','🇲🇽','🇨🇴','🇦🇷','🇺🇾','🇪🇸'];
+            const container = document.getElementById('emoji-list');
             list.forEach(e => {
                 const span = document.createElement('span');
                 span.className = 'emoji-item';
                 span.innerText = e;
-                span.onclick = () => sendEmoji(e);
-                l.appendChild(span);
-            });
-        }
-
-        function closePanel() {
-            document.getElementById('emoji-container').classList.remove('active');
-            document.getElementById('emoji-search').value = '';
-            buildEmojiPanel();
-        }
-
-        async function sendEmoji(emoji) {
-            if (!userPos) return;
-            const { error } = await _S.from('marcas').insert([{
-                emoji: emoji,
-                latitud: userPos.lat,
-                longitud: userPos.lng,
-                expira_en: new Date(Date.now() + 259200000).toISOString()
-            }]);
-            if (error) { console.error(error); return; }
-            loadData();
-            closePanel();
-        }
-
-        async function loadData() {
-            const { data } = await _S.from('marcas').select('*').gt('expira_en', new Date().toISOString());
-            if (data) {
-                let batch = [];
-                data.forEach(m => {
-                    if (!activeIds.has(m.id)) {
-                        batch.push(L.marker([m.latitud, m.longitud], {
-                            icon: L.divIcon({ html: `<div style="font-size:32px">${m.emoji}</div>`, className: 'p' })
-                        }));
-                        activeIds.add(m.id);
+                span.onclick = () => {
+                    if(userPos) {
+                        L.marker([userPos.lat, userPos.lng], {
+                            icon: L.divIcon({ html: `<div style="font-size:32px">${e}</div>`, className: 'p' })
+                        }).addTo(map);
                     }
-                });
-                if (batch.length) clusterGroup.addLayers(batch);
-            }
+                    document.getElementById('emoji-container').classList.remove('active');
+                };
+                container.appendChild(span);
+            });
         }
 
         window.onload = init;
