@@ -9,7 +9,6 @@
     <style>
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #fff; overflow: hidden; }
         #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; }
-
         #organismo-x {
             position: fixed;
             bottom: 50px;
@@ -23,10 +22,8 @@
             justify-content: center;
             transition: opacity 0.5s ease;
         }
-
         #organismo-x.bloqueado { pointer-events: none; opacity: 0.3; }
         #organismo-x.listo { pointer-events: auto; opacity: 1; }
-
         #halo-nebulosa {
             position: absolute;
             width: 70px; height: 70px;
@@ -36,17 +33,14 @@
             filter: blur(1px);
             animation: girar-nebulosa 0.8s linear infinite;
         }
-
         @keyframes girar-nebulosa {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
         .la-x-primordial {
             position: relative;
             width: 50px; height: 50px;
         }
-
         .la-x-primordial::before,
         .la-x-primordial::after {
             content: '';
@@ -55,19 +49,14 @@
             border-radius: 2px;
             box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
         }
-
         .la-x-primordial::before { top: 0; left: 22px; width: 6px; height: 50px; transform: rotate(45deg); }
         .la-x-primordial::after { top: 22px; left: 0; width: 50px; height: 6px; transform: rotate(45deg); }
-
         .listo .la-x-primordial { animation: respirar-x 3s ease-in-out infinite; }
-
         @keyframes respirar-x {
             0%, 100% { transform: scale(1); filter: drop-shadow(0 0 5px red); }
             50% { transform: scale(1.2); filter: drop-shadow(0 0 15px red); }
         }
-
         .cluster-organico { display: flex; align-items: center; justify-content: center; }
-
         .gota-miel {
             background: rgba(255, 180, 0, 0.75);
             border-radius: 45% 55% 50% 50% / 55% 50% 50% 45%; 
@@ -79,37 +68,28 @@
             justify-content: center;
             transition: all 0.3s ease;
         }
-
         .emoji-lider { font-size: 24px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.15)); user-select: none; }
-
         .leaflet-control-attribution { display: none !important; }
     </style>
 </head>
 <body>
-
     <div id="map"></div>
-    
     <div id="organismo-x" class="bloqueado">
         <div id="halo-nebulosa"></div>
         <div class="la-x-primordial"></div>
     </div>
-
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
         const SUPABASE_URL = "https://echdpjhzjsaqtvdrkgaj.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjaGRwamh6anNhcXR2ZHJrZ2FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTA2NTYsImV4cCI6MjA4ODk4NjY1Nn0.8_E_jXsoA8JSgQ-PSNRNc-vqePqFeEDWHiy5YFgc8oo";
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
         let map;
         const JITTER_FACTOR = 0.0001;
-
         const markers = L.markerClusterGroup({
             iconCreateFunction: function(cluster) {
                 const childMarkers = cluster.getAllChildMarkers();
                 const conteo = {};
-                
                 const primerEmojiMatch = childMarkers[0].options.icon.options.html.match(/>(.*?)</);
                 const emojiFundador = primerEmojiMatch ? primerEmojiMatch[1] : "X";
-
                 childMarkers.forEach(m => {
                     const match = m.options.icon.options.html.match(/>(.*?)</);
                     if (match && match[1]) {
@@ -117,19 +97,14 @@
                         conteo[emo] = (conteo[emo] || 0) + 1;
                     }
                 });
-
                 const predominante = Object.keys(conteo).reduce((a, b) => {
                     if (conteo[a] === conteo[b]) return emojiFundador;
                     return conteo[a] > conteo[b] ? a : b;
                 }, emojiFundador);
-
                 const count = cluster.getChildCount();
                 const size = Math.min(44 + (count * 1.2), 75); 
-
                 return L.divIcon({ 
-                    html: `<div class="gota-miel" style="width:${size}px; height:${size}px;">
-                             <span class="emoji-lider">${predominante}</span>
-                           </div>`, 
+                    html: `<div class="gota-miel" style="width:${size}px; height:${size}px;"><span class="emoji-lider">${predominante}</span></div>`, 
                     className: 'cluster-organico', 
                     iconSize: [size, size] 
                 });
@@ -138,24 +113,15 @@
             spiderfyOnMaxZoom: true,
             maxClusterRadius: 50 
         });
-
         function generarCoordenadasInmutables(lat, lng) {
             const offsetLat = (Math.random() * 2 - 1) * JITTER_FACTOR;
             const offsetLng = (Math.random() * 2 - 1) * JITTER_FACTOR;
-            return {
-                lat_render: lat + offsetLat,
-                lng_render: lng + offsetLng,
-                lat_origen: lat,
-                lng_origen: lng
-            };
+            return { lat_render: lat + offsetLat, lng_render: lng + offsetLng, lat_origen: lat, lng_origen: lng };
         }
-
         async function init() {
             map = L.map('map', { zoomControl: false, center: [23.6, -102.5], zoom: 5 });
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
             map.addLayer(markers);
-
             const { data: marcas } = await _supabase.from('marcas').select('*');
             if (marcas) {
                 marcas.forEach(m => {
@@ -164,7 +130,6 @@
                     if (lta && lng) añadirAlCluster(lta, lng, m.emoji);
                 });
             }
-
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(p => {
                     const lat = p.coords.latitude;
@@ -173,27 +138,28 @@
                     map.once('moveend', activarOrganismo);
                 }, () => setTimeout(activarOrganismo, 3000));
             }
-
             document.getElementById('organismo-x').addEventListener('click', async () => {
                 const org = document.getElementById('organismo-x');
                 org.style.pointerEvents = 'none';
                 org.style.opacity = '0.3';
-
                 navigator.geolocation.getCurrentPosition(async (p) => {
                     const lat = p.coords.latitude;
                     const lng = p.coords.longitude;
-                    const emoji = prompt("¿Qué pictograma vas a estampar en tu ubicación real?");
-                    
-                    if (emoji && emoji.trim() !== "") {
+                    const emojiRaw = prompt("Escoge el emoji que quieras poner desde tu teclado");
+                    if (emojiRaw && emojiRaw.trim() !== "") {
+                        const caracteres = [...emojiRaw.trim()];
+                        if (caracteres.length > 1) {
+                            alert("El Organismo solo acepta un pictograma a la vez. No escribas frases.");
+                            org.style.pointerEvents = 'auto';
+                            org.style.opacity = '1';
+                            return;
+                        }
+                        const emoji = caracteres[0];
                         const coords = generarCoordenadasInmutables(lat, lng);
                         const payload = { 
-                            lat_render: coords.lat_render, 
-                            lng_render: coords.lng_render, 
-                            latitud: coords.lat_origen,   
-                            longitud: coords.lng_origen,  
-                            emoji: emoji 
+                            lat_render: coords.lat_render, lng_render: coords.lng_render, 
+                            latitud: coords.lat_origen, longitud: coords.lng_origen, emoji: emoji 
                         };
-
                         const { error } = await _supabase.from('marcas').insert([payload]);
                         if (!error) {
                             añadirAlCluster(coords.lat_render, coords.lng_render, emoji);
@@ -209,14 +175,12 @@
                 }, { enableHighAccuracy: true });
             });
         }
-
         function activarOrganismo() {
             const org = document.getElementById('organismo-x');
             const halo = document.getElementById('halo-nebulosa');
             if (halo) halo.style.display = 'none';
             org.classList.replace('bloqueado', 'listo');
         }
-
         function añadirAlCluster(lat, lng, emoji) {
             const newMarker = L.marker([lat, lng], {
                 icon: L.divIcon({
@@ -227,7 +191,6 @@
             });
             markers.addLayer(newMarker);
         }
-
         window.onload = init;
     </script>
 </body>
