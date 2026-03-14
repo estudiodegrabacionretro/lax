@@ -145,31 +145,31 @@
                 navigator.geolocation.getCurrentPosition(async (p) => {
                     const lat = p.coords.latitude;
                     const lng = p.coords.longitude;
-                    const emojiRaw = prompt("Escoge el emoji que quieras poner desde tu teclado");
+                    const emojiRaw = prompt("Escoge el emoji que quieras poner desde tu pantalla");
                     if (emojiRaw && emojiRaw.trim() !== "") {
-                        const caracteres = [...emojiRaw.trim()];
-                        if (caracteres.length > 1) {
-                            alert("El Organismo solo acepta un pictograma a la vez. No escribas frases.");
-                            org.style.pointerEvents = 'auto';
-                            org.style.opacity = '1';
-                            return;
-                        }
-                        const emoji = caracteres[0];
-                        const coords = generarCoordenadasInmutables(lat, lng);
-                        const payload = { 
-                            lat_render: coords.lat_render, lng_render: coords.lng_render, 
-                            latitud: coords.lat_origen, longitud: coords.lng_origen, emoji: emoji 
-                        };
-                        const { error } = await _supabase.from('marcas').insert([payload]);
-                        if (!error) {
-                            añadirAlCluster(coords.lat_render, coords.lng_render, emoji);
-                            map.flyTo([lat, lng], 16, { duration: 1.5 });
+                        const limpio = emojiRaw.trim();
+                        const caracteres = [...limpio];
+                        const esBandera = /^[\u{1F1E6}-\u{1F1FF}]{2}$/u.test(limpio);
+                        if (caracteres.length === 1 || esBandera) {
+                            const emoji = limpio;
+                            const coords = generarCoordenadasInmutables(lat, lng);
+                            const payload = { 
+                                lat_render: coords.lat_render, lng_render: coords.lng_render, 
+                                latitud: coords.lat_origen, longitud: coords.lng_origen, emoji: emoji 
+                            };
+                            const { error } = await _supabase.from('marcas').insert([payload]);
+                            if (!error) {
+                                añadirAlCluster(coords.lat_render, coords.lng_render, emoji);
+                                map.flyTo([lat, lng], 16, { duration: 1.5 });
+                            }
+                        } else {
+                            alert("La equis solo acepta un sello o una bandera. No escribas frases.");
                         }
                     }
                     org.style.pointerEvents = 'auto';
                     org.style.opacity = '1';
                 }, () => {
-                    alert("El Organismo exige presencia física. Activa el GPS.");
+                    alert("La equis exige presencia física. Activa el GPS.");
                     org.style.pointerEvents = 'auto';
                     org.style.opacity = '1';
                 }, { enableHighAccuracy: true });
