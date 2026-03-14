@@ -1,61 +1,41 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>LA X - MODULO 1 (V2)</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        /* Pantalla completa, sin scroll ni márgenes */
-        body, html { 
-            margin: 0; padding: 0; height: 100%; width: 100%; 
-            overflow: hidden; background: #000; 
-        }
-        #map { 
-            height: 100vh; width: 100vw; 
-        }
-        /* Eliminar rastro de interfaz técnica de Leaflet */
-        .leaflet-control-attribution { display: none !important; }
-        .leaflet-container { background: #000 !important; }
-    </style>
-</head>
-<body>
+<script>
+    function init() {
+        // --- CAJA 1: EL ESCENARIO ---
+        const map = L.map('map', {
+            zoomControl: false,
+            inertia: true,
+            rotate: false
+        }).setView([0, 0], 2);
 
-    <div id="map"></div>
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        function init() {
-            // Configuración de libertad total y cenital fija
-            const map = L.map('map', {
-                zoomControl: false,      // Cero botones
-                inertia: true,           // Movimiento orgánico
-                inertiaDeceleration: 3000,
-                bounceAtZoomLimits: false,
-                rotate: false            // Mantener siempre al Norte
-            }).setView([0, 0], 2);
+        // --- CAJA 2: LA DECISIÓN Y LA ACCIÓN ---
+        // El Gatillo: Al aplastar la pantalla
+        map.on('click', function(e) {
+            // La Decisión: El panel de pictogramas (KISS: Usamos el teclado del sistema)
+            const emoji = prompt("¿Qué pictograma quieres estampar aquí?");
 
-            // Capa OSM Estándar (Nombres de calles y barrios)
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        const { latitude, longitude } = pos.coords;
-                        // Aterrizaje en nivel 16 (Detalle de calle)
-                        map.setView([latitude, longitude], 16);
-                    },
-                    (err) => {
-                        console.error("Error GPS:", err);
-                        // Fallback a vista general si no hay GPS
-                        map.setView([23.6345, -102.5528], 5); 
-                    },
-                    { enableHighAccuracy: true }
-                );
+            if (emoji) {
+                // La Acción: Estampado inmediato
+                L.marker(e.latlng, {
+                    icon: L.divIcon({
+                        className: 'emoji-marker',
+                        html: `<div style="font-size:35px; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));">${emoji}</div>`,
+                        iconSize: [40, 40],
+                        iconAnchor: [20, 20]
+                    })
+                }).addTo(map);
+                // Misión cumplida.
             }
-        }
+        });
 
-        window.onload = init;
-    </script>
-</body>
-</html>
+        // Ubicación inicial
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((pos) => {
+                map.setView([pos.coords.latitude, pos.coords.longitude], 16);
+            }, null, { enableHighAccuracy: true });
+        }
+    }
+
+    window.onload = init;
+</script>
