@@ -94,11 +94,7 @@
         <div class="la-x-primordial"></div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
         const SUPABASE_URL = "https://echdpjhzjsaqtvdrkgaj.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjaGRwamh6anNhcXR2ZHJrZ2FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTA2NTYsImV4cCI6MjA4ODk4NjY1Nn0.8_E_jXsoA8JSgQ-PSNRNc-vqePqFeEDWHiy5YFgc8oo";
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -157,6 +153,7 @@
         async function init() {
             map = L.map('map', { zoomControl: false, center: [23.6, -102.5], zoom: 5 });
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
             map.addLayer(markers);
 
             const { data: marcas } = await _supabase.from('marcas').select('*');
