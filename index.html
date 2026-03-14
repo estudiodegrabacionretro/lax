@@ -2,11 +2,11 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LA X - MODULO 1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>LA X - MODULO 1 (V2)</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* Limpieza total de la interfaz */
+        /* Pantalla completa, sin scroll ni márgenes */
         body, html { 
             margin: 0; padding: 0; height: 100%; width: 100%; 
             overflow: hidden; background: #000; 
@@ -14,8 +14,9 @@
         #map { 
             height: 100vh; width: 100vw; 
         }
-        /* Ocultar atribuciones para inmersión total */
+        /* Eliminar rastro de interfaz técnica de Leaflet */
         .leaflet-control-attribution { display: none !important; }
+        .leaflet-container { background: #000 !important; }
     </style>
 </head>
 <body>
@@ -25,28 +26,28 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         function init() {
-            // Inicialización sin controles visuales
+            // Configuración de libertad total y cenital fija
             const map = L.map('map', {
-                zoomControl: false,
-                inertia: true,
+                zoomControl: false,      // Cero botones
+                inertia: true,           // Movimiento orgánico
                 inertiaDeceleration: 3000,
-                worldCopyJump: true
-            }).setView([0, 0], 2); // Vista global temporal
+                bounceAtZoomLimits: false,
+                rotate: false            // Mantener siempre al Norte
+            }).setView([0, 0], 2);
 
-            // Capa estándar de OSM con nombres detallados
+            // Capa OSM Estándar (Nombres de calles y barrios)
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-            // Localización precisa
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
                         const { latitude, longitude } = pos.coords;
-                        // Centrar en el usuario con nivel 12
-                        map.setView([latitude, longitude], 12);
+                        // Aterrizaje en nivel 16 (Detalle de calle)
+                        map.setView([latitude, longitude], 16);
                     },
                     (err) => {
-                        console.error("Error de GPS:", err);
-                        // Fallback opcional si el GPS falla
+                        console.error("Error GPS:", err);
+                        // Fallback a vista general si no hay GPS
                         map.setView([23.6345, -102.5528], 5); 
                     },
                     { enableHighAccuracy: true }
