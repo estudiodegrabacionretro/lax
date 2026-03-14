@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa Táctico LAX - Gratis</title>
+    <title>Mapa Táctico LAX</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -12,15 +12,14 @@
 
     <style>
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: sans-serif; }
-        #map { height: 100vh; width: 100%; background: #aad3df; }
+        #map { height: 100vh; width: 100%; background: #ccdbe3; }
         #emoji-panel {
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
             background: white; padding: 15px; border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4); max-width: 90%; max-height: 200px;
-            overflow-y: auto; z-index: 1000; border: 1px solid #ccc;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-width: 90%; max-height: 180px;
+            overflow-y: auto; z-index: 1000; border: 1px solid #999;
         }
-        .emoji-category { margin-bottom: 10px; }
-        .category-title { font-weight: bold; font-size: 12px; color: #666; display: block; }
+        .category-title { font-weight: bold; font-size: 11px; color: #444; display: block; margin-top: 5px; text-transform: uppercase; }
         .emoji-item { cursor: pointer; font-size: 24px; padding: 5px; display: inline-block; }
         .emoji-item:hover { background: #eee; border-radius: 5px; }
     </style>
@@ -31,45 +30,39 @@
 <div id="emoji-panel"></div>
 
 <script>
-// CONFIGURACIÓN EMOJIS (SANEADA)
 const EMOJI_CATS = [
-    { icon: '⭐', label: 'Top', emojis: ['🔥','⚠️','📍','🐾','🦌','💧','🏠','🚨','✅','❌','🆘'] },
-    { icon: '🚩', label: 'Banderas', emojis: ['🇪🇨','🇲🇽','🇨🇴','🇦🇷','🇵🇪','🇻🇪','🇨🇱','🇬🇹','🇪🇸','🇨🇺','🇧🇴','🇩🇴','🇭🇳','🇵🇾','🇳🇮','🇸🇻','🇨🇷','🇵🇦','🇺🇾','🇵🇷','🇬🇶','🇺🇸','🇨🇦','🇬🇧','🇫🇷','🇩🇪','🇨🇳','🇷🇺','🇧🇷','🎌'] }
+    { label: 'TOP', emojis: ['🔥','⚠️','📍','🐾','🦌','💧','🏠','🚨','✅','❌','🆘'] },
+    { label: 'ANIMALES', emojis: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🦅','🦆','🦢','🦉','🐺','🐗','🐴','🦄','🐝','🦋','🐢','🐍','🦎','🐙','🦑','🦐','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🐐','🦌','🐕','🐈','🐓','🦃','🦢','🐇','🦝','🦨','🦡','🦦','🦥','🐁','🐀','🐿️','🦔'] },
+    { label: 'COMIDA', emojis: ['🍎','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥑','🥝','🍅','🫒','🍆','🥔','🥕','🌽','🌶️','🫑','🥦','🧄','🧅','🥜','🍞','🥐','🥖','🥨','🧀','🥚','🍳','🧈','🥞','🧇','🥓','🥩','🍗','🍖','🌭','🍔','🍟','🍕','🌮',' burrito','🥙','🍿','🧂','🍱','🍙','🍚','🍛','🍜','🍝','🍠','🍣','🍤','🥟','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯','🍼','🥛','☕','🍵','🧃','🥤','🍶','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🍾'] }
 ];
 
 let map;
 let selectedEmoji = '📍';
 
 function initMap() {
-    // Inicializar mapa gratuito (Leaflet)
+    // Inicializar Leaflet con OpenStreetMap
     map = L.map('map').setView([29.089, -110.961], 13);
 
-    // Cargar los cuadros del mapa (OpenStreetMap) - ESTO ES GRATIS
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap'
+        attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Panel de Emojis
     const panel = document.getElementById('emoji-panel');
     EMOJI_CATS.forEach(cat => {
-        const div = document.createElement('div');
-        div.className = 'emoji-category';
         const title = document.createElement('span');
         title.className = 'category-title';
         title.innerText = cat.label;
-        div.appendChild(title);
+        panel.appendChild(title);
 
         cat.emojis.forEach(emoji => {
             const span = document.createElement('span');
             span.className = 'emoji-item';
             span.innerText = emoji;
             span.onclick = () => { selectedEmoji = emoji; };
-            div.appendChild(span);
+            panel.appendChild(span);
         });
-        panel.appendChild(div);
     });
 
-    // Poner marcador al hacer clic
     map.on('click', function(e) {
         const icon = L.divIcon({
             html: `<div style="font-size: 24px;">${selectedEmoji}</div>`,
