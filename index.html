@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa Interactivo Universal</title>
+    <title>Muro Geográfico Universal</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -11,39 +11,31 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         #map { height: 100vh; width: 100%; background: #ccdbe3; }
         
         #emoji-panel {
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-width: 95%; max-height: 250px;
+            background: white; padding: 15px; border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4); width: 92%; max-height: 240px;
             overflow-y: auto; z-index: 1000; border: 1px solid #ddd;
-            backdrop-filter: blur(5px);
         }
 
-        .emoji-category { margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .category-title { 
-            font-weight: bold; font-size: 11px; color: #666; 
-            display: block; margin-bottom: 8px; text-transform: uppercase; 
-            letter-spacing: 1px; 
-        }
-
-        .emoji-grid { display: flex; flex-wrap: wrap; gap: 5px; }
+        .cat-section { margin-bottom: 15px; }
+        .cat-title { font-size: 11px; font-weight: 800; color: #999; text-transform: uppercase; margin-bottom: 8px; display: block; letter-spacing: 1px; }
         
+        .emoji-grid { display: flex; flex-wrap: wrap; gap: 6px; }
         .emoji-item { 
-            cursor: pointer; font-size: 26px; width: 42px; height: 42px; 
+            cursor: pointer; font-size: 28px; width: 45px; height: 45px; 
             display: flex; align-items: center; justify-content: center; 
-            transition: transform 0.1s, background 0.2s; border-radius: 8px;
-            user-select: none;
+            transition: 0.1s; border-radius: 12px; user-select: none;
         }
+        .emoji-item:hover { transform: scale(1.2); background: #f8f8f8; }
+        .emoji-item.active { background: #eee; border: 2px solid #ccc; }
 
-        .emoji-item:hover { transform: scale(1.2); background: #f0f0f0; }
-        .emoji-item.active { background: #e0e0e0; box-shadow: inset 0 0 5px rgba(0,0,0,0.1); }
-
-        /* Scrollbar estética */
-        #emoji-panel::-webkit-scrollbar { width: 6px; }
-        #emoji-panel::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+        /* Scrollbar */
+        #emoji-panel::-webkit-scrollbar { width: 5px; }
+        #emoji-panel::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -52,15 +44,94 @@
 <div id="emoji-panel"></div>
 
 <script>
+// CONFIGURACIÓN DE TU PROYECTO (Sustituye con tus datos de Supabase)
+const SB_URL = 'TU_URL_DE_SUPABASE';
+const SB_KEY = 'TU_ANON_KEY_DE_SUPABASE';
+const supabase = supabase.createClient(SB_URL, SB_KEY);
+
 const EMOJI_CATS = [
-    { 
-        label: 'Favoritos', 
-        emojis: ['❤️','😂','🔥','😍','✅','📍','😊','🙌','✨','🙏','⚠️','🆘'] 
-    },
-    { 
-        label: 'Caras y Gente', 
-        emojis: ['😀','😃','😄','😁','😆','😅','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😋','😛','😜','🧐','😎','🥳','😏','😒','😔','😟','😕','☹️','🥺','😢','😭','😤','😠','😡','🤬','🤯','🥶','🥵','😱','💩','🤡','👻','👽','🤖','👋','👌','👍','👎','👏','🙏','💪'] 
-    },
-    { 
-        label: 'Deportes y Ocio', 
-        emojis: ['⚽','🏀','🏈','⚾','🎾','🏐','🏉','🎱','🏓','🏸','🥅','🏒','🥊','
+    { t: 'Populares', e: ['❤️','😂','🔥','📍','✅','⚠️','🆘','✨'] },
+    { t: 'Latinoamérica', e: ['🇲🇽','🇬🇹','🇸🇻','🇭🇳','🇳🇮','🇨🇷','🇵🇦','🇨🇺','🇩🇴','🇵🇷','🇨🇴','🇻🇪','🇪🇨','🇵🇪','🇧🇴','🇵🇾','🇨🇱','🇦🇷','🇺🇾','🇧🇷'] },
+    { t: 'Gente', e: ['😀','😎','🥳','🥺','😭','😡','👍','👎','🙌','🙏','💪','🧠'] },
+    { t: 'Deportes', e: ['⚽','🏀','🏈','⚾','🎾','🏐','🎱','🥊','🚴','🏆','🎮','🎲','🛹'] },
+    { t: 'Animales', e: ['🐶','🐱','🦊','🦁','🐮','🐷','🐸','🦅','🐢','🐳','🐍','🦌','🐾'] },
+    { t: 'Comida', e: ['🍎','🍕','🍔',' taco',' burrito','🥩','🍺','☕','🍦','🍩'] },
+    { t: 'Lugares y Cosas', e: ['🏠','🏢','🏥','🏦','🏫','⛪','🌅','🏖️','🏔️','🚗','✈️','💡','📱','💰','🔑','🎁'] }
+];
+
+let map;
+let selectedEmoji = '📍';
+
+async function init() {
+    // Inicializar mapa centrado en el continente
+    map = L.map('map').setView([15, -75], 4);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    renderPanel();
+    await loadMarkers();
+
+    map.on('click', (e) => saveMarker(e.latlng.lat, e.latlng.lng));
+}
+
+function renderPanel() {
+    const panel = document.getElementById('emoji-panel');
+    EMOJI_CATS.forEach(cat => {
+        const div = document.createElement('div');
+        div.className = 'cat-section';
+        div.innerHTML = `<span class="cat-title">${cat.t}</span>`;
+        
+        const grid = document.createElement('div');
+        grid.className = 'emoji-grid';
+
+        cat.e.forEach(emoji => {
+            const span = document.createElement('span');
+            span.className = 'emoji-item' + (emoji === selectedEmoji ? ' active' : '');
+            span.innerText = emoji;
+            span.onclick = () => {
+                selectedEmoji = emoji;
+                document.querySelectorAll('.emoji-item').forEach(i => i.classList.remove('active'));
+                span.classList.add('active');
+            };
+            grid.appendChild(span);
+        });
+        div.appendChild(grid);
+        panel.appendChild(div);
+    });
+}
+
+async function saveMarker(lat, lng) {
+    placeMarker(lat, lng, selectedEmoji); // Poner en mapa local
+    
+    const { error } = await supabase
+        .from('marcadores') 
+        .insert([{ lat, lng, emoji: selectedEmoji }]);
+    
+    if (error) console.error('Error al guardar en BD:', error.message);
+}
+
+async function loadMarkers() {
+    const { data, error } = await supabase.from('marcadores').select('*');
+    if (data) {
+        data.forEach(m => placeMarker(m.lat, m.lng, m.emoji));
+    } else if (error) {
+        console.error('Error al cargar:', error.message);
+    }
+}
+
+function placeMarker(lat, lng, emoji) {
+    const icon = L.divIcon({
+        html: `<div style="font-size: 30px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">${emoji}</div>`,
+        className: 'custom-marker',
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
+    });
+    L.marker([lat, lng], { icon }).addTo(map);
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
