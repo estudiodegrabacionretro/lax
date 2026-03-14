@@ -7,50 +7,47 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #f0f0f0; overflow: hidden; font-family: sans-serif; }
-        #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #fff; overflow: hidden; font-family: sans-serif; }
+        #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; background: #f0f0f0; }
 
+        /* Interfaz de Control */
         #organismo-x {
-            position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
-            width: 100px; height: 100px; z-index: 999;
+            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+            width: 80px; height: 80px; z-index: 999;
             display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s ease;
         }
-        #organismo-x.bloqueado { pointer-events: none; opacity: 0.3; }
-        #organismo-x.listo { pointer-events: auto; opacity: 1; cursor: pointer; }
+        #organismo-x.bloqueado { opacity: 0.4; filter: grayscale(1); pointer-events: none; }
+        #organismo-x.listo { opacity: 1; cursor: pointer; }
 
-        .la-x-primordial { position: relative; width: 50px; height: 50px; }
+        .la-x-primordial { position: relative; width: 40px; height: 40px; }
         .la-x-primordial::before, .la-x-primordial::after {
             content: ''; position: absolute; background: #ff0000; border-radius: 2px;
-            box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
         }
-        .la-x-primordial::before { top: 0; left: 22px; width: 6px; height: 50px; transform: rotate(45deg); }
-        .la-x-primordial::after { top: 22px; left: 0; width: 50px; height: 6px; transform: rotate(45deg); }
-        .listo .la-x-primordial { animation: respirar-x 3s ease-in-out infinite; }
+        .la-x-primordial::before { top: 0; left: 17px; width: 6px; height: 40px; transform: rotate(45deg); }
+        .la-x-primordial::after { top: 17px; left: 0; width: 40px; height: 6px; transform: rotate(45deg); }
+        .listo .la-x-primordial { animation: respirar-x 2s ease-in-out infinite; }
 
+        /* Consola de Emojis */
         #consola {
-            position: fixed; bottom: -100%; left: 0; width: 100%; height: 85%;
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px); border-radius: 40px 40px 0 0;
-            z-index: 1000; transition: bottom 0.5s cubic-bezier(0.1, 0.9, 0.2, 1);
-            display: flex; flex-direction: column; box-shadow: 0 -10px 30px rgba(0,0,0,0.1);
+            position: fixed; bottom: -100%; left: 0; width: 100%; height: 75%;
+            background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px); border-radius: 30px 30px 0 0;
+            z-index: 1000; transition: bottom 0.4s cubic-bezier(0.1, 0.9, 0.2, 1);
+            display: flex; flex-direction: column; box-shadow: 0 -5px 25px rgba(0,0,0,0.15);
         }
         #consola.abierta { bottom: 0; }
 
-        .consola-header { padding: 20px 25px 10px 25px; display: flex; justify-content: flex-end; }
-        .btn-cerrar { color: #ff0000; font-size: 35px; cursor: pointer; opacity: 0.8; line-height: 1; }
+        .consola-header { padding: 15px 25px; display: flex; justify-content: flex-end; }
+        .btn-cerrar { color: #ff0000; font-size: 30px; cursor: pointer; font-weight: bold; }
 
         .emoji-grid {
-            flex: 1; display: grid; grid-template-columns: repeat(8, 1fr);
-            gap: 5px; padding: 0 10px 20px 10px; overflow-y: auto; align-content: start;
-            scrollbar-width: none;
+            flex: 1; display: grid; grid-template-columns: repeat(6, 1fr); /* Menos columnas para mejor tacto */
+            gap: 15px; padding: 10px 20px 30px 20px; overflow-y: auto; align-content: start;
         }
-        .emoji-grid::-webkit-scrollbar { display: none; }
         .emoji-item {
-            font-size: 34px; text-align: center; cursor: pointer; padding: 8px 0;
+            font-size: 40px; text-align: center; cursor: pointer; padding: 10px;
             transition: transform 0.1s; -webkit-tap-highlight-color: transparent;
         }
-        .emoji-item:active { transform: scale(1.5); }
-
-        .consola-nav {
-            height: 95px; display: flex; justify-content: space-around;
-            align-items: center
+        .emoji-item:active { transform: scale(1.4); }
