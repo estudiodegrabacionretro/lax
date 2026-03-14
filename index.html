@@ -10,30 +10,60 @@
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; overflow: hidden; }
         #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; }
         
-        /* El Pin Rojo: El Organismo que respira */
-        #pin-organico {
+        /* Contenedor del Organismo X */
+        #organismo-x {
             position: fixed;
-            bottom: 40px;
+            bottom: 50px; /* Posición ergonómica para el pulgar */
             left: 50%;
             transform: translateX(-50%);
-            width: 60px;
-            height: 60px;
-            background: radial-gradient(circle, #ff0000 0%, #8b0000 100%);
-            border-radius: 50%;
+            width: 80px; 
+            height: 80px;
             z-index: 999;
             cursor: pointer;
-            box-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            /* Animación de respiración */
-            animation: respirar 4s ease-in-out infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        @keyframes respirar {
-            0%, 100% { transform: translateX(-50%) scale(1); box-shadow: 0 0 15px rgba(255, 0, 0, 0.4); }
-            50% { transform: translateX(-50%) scale(1.1); box-shadow: 0 0 30px rgba(255, 0, 0, 0.8); }
+        /* La X Corpórea y su Respiración */
+        .la-x-primordial {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            animation: respirar-x 3s ease-in-out infinite;
         }
 
-        /* Limpieza de interfaz */
+        /* Las dos barras de la X */
+        .la-x-primordial::before,
+        .la-x-primordial::after {
+            content: '';
+            position: absolute;
+            background: #ff0000;
+            border-radius: 2px;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
+        }
+
+        /* Barra 1 */
+        .la-x-primordial::before {
+            top: 0; left: 22px;
+            width: 6px; height: 50px;
+            transform: rotate(45deg);
+        }
+
+        /* Barra 2 */
+        .la-x-primordial::after {
+            top: 22px; left: 0;
+            width: 50px; height: 6px;
+            transform: rotate(45deg);
+        }
+
+        @keyframes respirar-x {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.8)); }
+        }
+
+        /* Limpieza de Leaflet */
         .leaflet-control-attribution { display: none !important; }
         .leaflet-container { background: #000 !important; }
     </style>
@@ -42,13 +72,14 @@
 
     <div id="map"></div>
     
-    <div id="pin-organico"></div>
+    <div id="organismo-x">
+        <div class="la-x-primordial"></div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-        // Configuración de Conexión
         const SUPABASE_URL = "https://echdpjhzjsaqtvdrkgaj.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjaGRwamh6anNhcXR2ZHJrZ2FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTA2NTYsImV4cCI6MjA4ODk4NjY1Nn0.8_E_jXsoA8JSgQ-PSNRNc-vqePqFeEDWHiy5YFgc8oo";
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -56,40 +87,32 @@
         let map;
 
         async function init() {
-            // Mapa modo oscuro (CartoDB Dark Matter)
+            // Mapa modo oscuro
             map = L.map('map', { 
                 zoomControl: false,
                 center: [23.6, -102.5],
                 zoom: 5
             });
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19
-            }).addTo(map);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-            // Cargar marcas de Supabase
+            // Cargar marcas previas
             const { data: marcas } = await _supabase.from('marcas').select('*');
             if (marcas) {
                 marcas.forEach(m => estamparEnMapa(m.latitud, m.longitud, m.emoji));
             }
 
-            // Gatillo: El Pin Rojo llama a la acción
-            document.getElementById('pin-organico').addEventListener('click', async () => {
-                // Por ahora usamos el prompt para no perder la conexión con la DB, 
-                // en el siguiente paso lo cambiaremos por la Consola Fullscreen.
-                const emoji = prompt("¿Qué pictograma quieres estampar en este centro?");
+            // GATILLO: Al tocar la X
+            document.getElementById('organismo-x').addEventListener('click', async () => {
+                const emoji = prompt("¿Qué pictograma vas a estampar?");
                 
                 if (emoji && emoji.trim() !== "") {
                     const centro = map.getCenter();
-                    
-                    // Acción Visual
                     estamparEnMapa(centro.lat, centro.lng, emoji);
                     
-                    // Acción en Memoria
-                    const { error } = await _supabase.from('marcas').insert([
+                    await _supabase.from('marcas').insert([
                         { latitud: centro.lat, longitud: centro.lng, emoji: emoji }
                     ]);
-                    if (error) console.error("Error al guardar:", error);
                 }
             });
 
@@ -105,7 +128,7 @@
             L.marker([lat, lng], {
                 icon: L.divIcon({
                     className: 'sello',
-                    html: `<div style="font-size:40px; transform: translate(-50%, -50%); text-align: center;">${emoji}</div>`,
+                    html: `<div style="font-size:40px; transform: translate(-50%, -50%);">${emoji}</div>`,
                     iconSize: [0, 0]
                 })
             }).addTo(map);
