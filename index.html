@@ -2,52 +2,169 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Una equis marcará el lugar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LA X - NEBULOSA</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #fff; overflow: hidden; font-family: sans-serif; }
-        #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; background: #f0f0f0; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; overflow: hidden; }
+        #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; }
 
-        /* Interfaz de Control */
+        /* Contenedor del Organismo */
         #organismo-x {
-            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 80px; height: 80px; z-index: 999;
-            display: flex; align-items: center; justify-content: center;
-            transition: all 0.3s ease;
+            position: fixed;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 100px;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease;
         }
-        #organismo-x.bloqueado { opacity: 0.4; filter: grayscale(1); pointer-events: none; }
-        #organismo-x.listo { opacity: 1; cursor: pointer; }
 
-        .la-x-primordial { position: relative; width: 40px; height: 40px; }
-        .la-x-primordial::before, .la-x-primordial::after {
-            content: ''; position: absolute; background: #ff0000; border-radius: 2px;
-            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        /* ESTADO BLOQUEADO: La X no responde */
+        #organismo-x.bloqueado {
+            pointer-events: none;
+            opacity: 0.3;
         }
-        .la-x-primordial::before { top: 0; left: 17px; width: 6px; height: 40px; transform: rotate(45deg); }
-        .la-x-primordial::after { top: 17px; left: 0; width: 40px; height: 6px; transform: rotate(45deg); }
-        .listo .la-x-primordial { animation: respirar-x 2s ease-in-out infinite; }
 
-        /* Consola de Emojis */
-        #consola {
-            position: fixed; bottom: -100%; left: 0; width: 100%; height: 75%;
-            background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px); border-radius: 30px 30px 0 0;
-            z-index: 1000; transition: bottom 0.4s cubic-bezier(0.1, 0.9, 0.2, 1);
-            display: flex; flex-direction: column; box-shadow: 0 -5px 25px rgba(0,0,0,0.15);
+        /* ESTADO LISTO: La X brilla y late */
+        #organismo-x.listo {
+            pointer-events: auto;
+            opacity: 1;
         }
-        #consola.abierta { bottom: 0; }
 
-        .consola-header { padding: 15px 25px; display: flex; justify-content: flex-end; }
-        .btn-cerrar { color: #ff0000; font-size: 30px; cursor: pointer; font-weight: bold; }
+        /* LA NEBULOSA (Órbita de carga) */
+        #halo-nebulosa {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-top: 3px solid #ff0000; /* Arco de luz */
+            filter: blur(1px);
+            animation: girar-nebulosa 0.8s linear infinite;
+        }
 
-        .emoji-grid {
-            flex: 1; display: grid; grid-template-columns: repeat(6, 1fr); /* Menos columnas para mejor tacto */
-            gap: 15px; padding: 10px 20px 30px 20px; overflow-y: auto; align-content: start;
+        @keyframes girar-nebulosa {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
-        .emoji-item {
-            font-size: 40px; text-align: center; cursor: pointer; padding: 10px;
-            transition: transform 0.1s; -webkit-tap-highlight-color: transparent;
+
+        /* LA X PRIMORDIAL */
+        .la-x-primordial {
+            position: relative;
+            width: 50px;
+            height: 50px;
         }
-        .emoji-item:active { transform: scale(1.4); }
+
+        .la-x-primordial::before,
+        .la-x-primordial::after {
+            content: '';
+            position: absolute;
+            background: #ff0000;
+            border-radius: 2px;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
+        }
+
+        .la-x-primordial::before { top: 0; left: 22px; width: 6px; height: 50px; transform: rotate(45deg); }
+        .la-x-primordial::after { top: 22px; left: 0; width: 50px; height: 6px; transform: rotate(45deg); }
+
+        /* Animación de Respiración (Solo cuando esté listo) */
+        .listo .la-x-primordial {
+            animation: respirar-x 3s ease-in-out infinite;
+        }
+
+        @keyframes respirar-x {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 5px red); }
+            50% { transform: scale(1.2); filter: drop-shadow(0 0 15px red); }
+        }
+
+        .leaflet-control-attribution { display: none !important; }
+        .leaflet-container { background: #000 !important; }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+    
+    <div id="organismo-x" class="bloqueado">
+        <div id="halo-nebulosa"></div>
+        <div class="la-x-primordial"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        const SUPABASE_URL = "https://echdpjhzjsaqtvdrkgaj.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjaGRwamh6anNhcXR2ZHJrZ2FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTA2NTYsImV4cCI6MjA4ODk4NjY1Nn0.8_E_jXsoA8JSgQ-PSNRNc-vqePqFeEDWHiy5YFgc8oo";
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let map;
+
+        async function init() {
+            map = L.map('map', { zoomControl: false, center: [23.6, -102.5], zoom: 5 });
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+            // Cargar marcas
+            const { data: marcas } = await _supabase.from('marcas').select('*');
+            if (marcas) {
+                marcas.forEach(m => estamparEnMapa(m.latitud, m.longitud, m.emoji));
+            }
+
+            // Lógica de Localización y Activación
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(p => {
+                    const lat = p.coords.latitude;
+                    const lng = p.coords.longitude;
+
+                    // Volar a la ubicación
+                    map.flyTo([lat, lng], 16, { duration: 2 });
+
+                    // Activar al terminar el movimiento
+                    map.once('moveend', () => {
+                        activarOrganismo();
+                    });
+                }, () => {
+                    // Si falla el GPS o lo niegan, activamos tras 5s en la vista actual
+                    setTimeout(activarOrganismo, 5000);
+                });
+            }
+
+            // Acción del Sello
+            document.getElementById('organismo-x').addEventListener('click', async () => {
+                const emoji = prompt("¿Qué pictograma vas a estampar?");
+                if (emoji && emoji.trim() !== "") {
+                    const centro = map.getCenter();
+                    estamparEnMapa(centro.lat, centro.lng, emoji);
+                    await _supabase.from('marcas').insert([{ latitud: centro.lat, longitud: centro.lng, emoji: emoji }]);
+                }
+            });
+        }
+
+        function activarOrganismo() {
+            const org = document.getElementById('organismo-x');
+            const halo = document.getElementById('halo-nebulosa');
+            
+            if (halo) halo.style.display = 'none';
+            org.classList.replace('bloqueado', 'listo');
+        }
+
+        function estamparEnMapa(lat, lng, emoji) {
+            L.marker([lat, lng], {
+                icon: L.divIcon({
+                    className: 'sello',
+                    html: `<div style="font-size:40px; transform: translate(-50%, -50%); text-align:center;">${emoji}</div>`,
+                    iconSize: [0, 0]
+                })
+            }).addTo(map);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
