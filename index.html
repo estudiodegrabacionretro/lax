@@ -3,32 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>LA X - RECUERADO</title>
+    <title>LA X - INSTANT EMOJIS</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         #map { position: absolute; inset: 0; z-index: 1; background: #111; }
+
+        /* Botón LA X */
         #btn-x {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            width: 80px; height: 80px; background: #007bff; color: white;
+            width: 75px; height: 75px; background: #007bff; color: white;
             border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 40px; font-weight: bold; cursor: pointer; z-index: 10;
-            box-shadow: 0 0 20px rgba(0,123,255,0.6); border: 4px solid #fff;
+            font-size: 35px; font-weight: bold; cursor: pointer; z-index: 10;
+            box-shadow: 0 0 20px rgba(0,123,255,0.5); border: 3px solid #fff;
+            transition: 0.2s;
         }
+        #btn-x:active { transform: translateX(-50%) scale(0.9); }
+
+        /* Panel Deslizable estilo WhatsApp */
         #emoji-container {
-            position: absolute; bottom: -100%; left: 0; width: 100%; height: 75%;
-            background: #1a1a1a; z-index: 20; transition: bottom 0.3s ease;
-            border-radius: 25px 25px 0 0; display: flex; flex-direction: column; color: white;
+            position: absolute; bottom: -100%; left: 0; width: 100%; height: 70%;
+            background: #1c1c1e; z-index: 20; transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 20px 20px 0 0; display: flex; flex-direction: column;
+            color: white; box-shadow: 0 -5px 25px rgba(0,0,0,0.8);
         }
         #emoji-container.active { bottom: 0; }
-        .handle { width: 40px; height: 5px; background: #555; border-radius: 10px; margin: 12px auto; }
-        #emoji-list { flex: 1; overflow-y: auto; padding: 15px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
-        .emoji-item { font-size: 32px; text-align: center; cursor: pointer; }
+
+        .handle { width: 40px; height: 5px; background: #3a3a3c; border-radius: 10px; margin: 10px auto; flex-shrink: 0; }
+        
+        #search-box { padding: 5px 15px 10px; }
+        #emoji-search {
+            width: 100%; padding: 10px; border-radius: 10px; border: none;
+            background: #2c2c2e; color: white; font-size: 16px; box-sizing: border-box;
+        }
+
+        #tabs {
+            display: flex; overflow-x: auto; padding: 5px 10px; gap: 8px;
+            border-bottom: 1px solid #2c2c2e; scrollbar-width: none; flex-shrink: 0;
+        }
+        #tabs::-webkit-scrollbar { display: none; }
+        .tab {
+            padding: 6px 14px; border-radius: 15px; background: #2c2c2e;
+            white-space: nowrap; cursor: pointer; font-size: 14px; color: #8e8e93;
+        }
+        .tab.active { background: #007bff; color: white; }
+
+        #emoji-list {
+            flex: 1; overflow-y: auto; padding: 15px;
+            display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
+            align-content: start;
+        }
+        .emoji-item { font-size: 32px; text-align: center; cursor: pointer; transition: 0.1s; }
+        .emoji-item:active { transform: scale(1.3); }
+
+        .custom-div-icon { background: none; border: none; text-align: center; }
     </style>
 </head>
 <body>
@@ -37,55 +72,36 @@
     <div id="btn-x">X</div>
 
     <div id="emoji-container">
-        <div class="handle" onclick="document.getElementById('emoji-container').classList.remove('active')"></div>
+        <div class="handle" onclick="closePanel()"></div>
+        <div id="search-box">
+            <input type="text" id="emoji-search" placeholder="Buscar emojis...">
+        </div>
+        <div id="tabs"></div>
         <div id="emoji-list"></div>
     </div>
 
     <script>
         const _U = "https://echdpjhzjsaqtvdrkgaj.supabase.co";
         const _K = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjaGRwamh6anNhcXR2ZHJrZ2FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTA2NTYsImV4cCI6MjA4ODk4NjY1Nn0.8_E_jXsoA8JSgQ-PSNRNc-vqePqFeEDWHiy5YFgc8oo";
-        
-        let _S;
-        try { _S = supabase.createClient(_U, _K); } catch (e) { console.error("Error base datos"); }
+        const _S = supabase.createClient(_U, _K);
 
-        let map, userPos;
+        let map, userPos, clusterGroup, activeIds = new Set();
+        let currentTab = 'Frecuentes';
+
+        const EMOJI_CATS = [
+            { icon: '⭐', label: 'Frecuentes', emojis: ['🔥','⚠️','📍','🐾','🦌','💧','🏠','🚨','✅','🆘'] },
+            { icon: '🚩', label: 'Banderas', emojis: ['🇲🇽','🇬🇹','🇸🇻','🇭🇳','🇳🇮','🇨🇷','🇵🇦','🇨🇺','🇩🇴','🇵🇷','🇨🇴','🇮T','🇻🇪','🇪🇨','🇵🇪','🇧🇴','🇵🇾','🇨🇱','🇦🇷','🇺🇾','🇧🇷','🇪🇸','🇺🇸'] },
+            { icon: '😀', label: 'Caras', emojis: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','🥰','😍','🤩','😘','😋','😛','😜','😎','🥳','🥺','😭','😡','🤮','😴'] },
+            { icon: '🐶', label: 'Animales', emojis: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦢','🦉','🐢','🐍','🦎','🐙','🦑','🦐','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐆','🦓','🦍','🐘','🦛','🦏','🐪','🦒','🦘','🐃','🐎','🐖','🐏','🐐','🦌','🐕','🐈','🐓','🦃','🦨','🦡','🦦','🦫','🦔','🐁','🐿️','🐾','🐉'] }
+        ];
 
         function init() {
-            // EL MAPA CARGA PRIMERO SIEMPRE
-            map = L.map('map', { zoomControl: false }).setView([23, -102], 5);
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([23, -102], 5);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+            
+            clusterGroup = L.markerClusterGroup({ showCoverageOnHover: false });
+            map.addLayer(clusterGroup);
 
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(p => {
-                    userPos = { lat: p.coords.latitude, lng: p.coords.longitude };
-                    map.setView([userPos.lat, userPos.lng], 15);
-                    L.circleMarker([userPos.lat, userPos.lng], { radius: 8, color: '#fff', fillColor: '#007bff', fillOpacity: 1 }).addTo(map);
-                });
-            }
-
-            document.getElementById('btn-x').onclick = () => {
-                document.getElementById('emoji-container').classList.add('active');
-            };
-
-            const list = ['🔥','⚠️','📍','🐾','🦌','💧','🏠','🚨','✅','🆘','🇲🇽','🇨🇴','🇦🇷','🇺🇾','🇪🇸'];
-            const container = document.getElementById('emoji-list');
-            list.forEach(e => {
-                const span = document.createElement('span');
-                span.className = 'emoji-item';
-                span.innerText = e;
-                span.onclick = () => {
-                    if(userPos) {
-                        L.marker([userPos.lat, userPos.lng], {
-                            icon: L.divIcon({ html: `<div style="font-size:32px">${e}</div>`, className: 'p' })
-                        }).addTo(map);
-                    }
-                    document.getElementById('emoji-container').classList.remove('active');
-                };
-                container.appendChild(span);
-            });
-        }
-
-        window.onload = init;
-    </script>
-</body>
-</html>
+                navigator.geolocation.watchPosition(p => {
+                    userPos = { lat
