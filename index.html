@@ -1,41 +1,57 @@
-<script>
-    function init() {
-        // 1. EL ESCENARIO
-        const map = L.map('map', {
-            zoomControl: false,
-            center: [23.6, -102.5], // México por default
-            zoom: 5
-        });
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>LA X - MISION CUMPLIDA</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #000; }
+        #map { height: 100vh; width: 100vw; }
+        .leaflet-control-attribution { display: none !important; }
+    </style>
+</head>
+<body>
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    <div id="map"></div>
 
-        // 2. LA DECISIÓN Y LA ACCIÓN (Caja Única)
-        // Forzamos al mapa a escuchar el "aplastón"
-        map.on('click', function(e) {
-            console.log("Gatillo detectado en:", e.latlng); // Esto te confirma en consola que funciona
-            
-            // Invocamos el panel nativo
-            const emoji = prompt("ESCRIBE TU EMOJI AQUÍ:");
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        function init() {
+            // MÓDULO 1: EL ESCENARIO
+            const map = L.map('map', {
+                zoomControl: false,
+                inertia: true
+            }).setView([0, 0], 2);
 
-            if (emoji && emoji.trim() !== "") {
-                // El Estampado
-                L.marker(e.latlng, {
-                    icon: L.divIcon({
-                        className: 'sello',
-                        html: `<div style="font-size:40px; margin-top:-20px; margin-left:-10px;">${emoji}</div>`,
-                        iconSize: [0, 0]
-                    })
-                }).addTo(map);
-                alert("Pictograma estampado."); 
-            }
-        });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        // GPS
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition((pos) => {
-                map.setView([pos.coords.latitude, pos.coords.longitude], 16);
+            // MÓDULO 2: LA DECISIÓN Y LA ACCIÓN (Caja Única)
+            // EL GATILLO
+            map.on('click', function(e) {
+                // LA DECISIÓN: Panel nativo (KISS)
+                const emoji = prompt("¿Qué pictograma quieres estampar?");
+                
+                if (emoji) {
+                    // LA ACCIÓN: Estampado
+                    L.marker(e.latlng, {
+                        icon: L.divIcon({
+                            className: 'sello',
+                            html: `<div style="font-size:40px; margin-top:-20px; margin-left:-20px;">${emoji}</div>`,
+                            iconSize: [0, 0]
+                        })
+                    }).addTo(map);
+                }
             });
+
+            // UBICACIÓN (GPS)
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    map.setView([pos.coords.latitude, pos.coords.longitude], 16);
+                }, null, { enableHighAccuracy: true });
+            }
         }
-    }
-    window.onload = init;
-</script>
+        window.onload = init;
+    </script>
+</body>
+</html>
