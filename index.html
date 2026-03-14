@@ -3,38 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LA X - ORGANISMO</title>
+    <title>LA X - NEBULOSA</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* Estética Base */
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; overflow: hidden; }
         #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; }
-        
-        /* Contenedor del Organismo X */
+
+        /* Contenedor del Organismo */
         #organismo-x {
             position: fixed;
-            bottom: 50px; /* Posición ergonómica para el pulgar */
+            bottom: 50px;
             left: 50%;
             transform: translateX(-50%);
-            width: 80px; 
-            height: 80px;
+            width: 100px;
+            height: 100px;
             z-index: 999;
-            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            -webkit-tap-highlight-color: transparent;
+            transition: opacity 0.5s ease;
         }
 
-        /* La X Corpórea y su Respiración */
+        /* ESTADO BLOQUEADO: La X no responde */
+        #organismo-x.bloqueado {
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        /* ESTADO LISTO: La X brilla y late */
+        #organismo-x.listo {
+            pointer-events: auto;
+            opacity: 1;
+        }
+
+        /* LA NEBULOSA (Órbita de carga) */
+        #halo-nebulosa {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-top: 3px solid #ff0000; /* Arco de luz */
+            filter: blur(1px);
+            animation: girar-nebulosa 0.8s linear infinite;
+        }
+
+        @keyframes girar-nebulosa {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* LA X PRIMORDIAL */
         .la-x-primordial {
             position: relative;
             width: 50px;
             height: 50px;
-            animation: respirar-x 3s ease-in-out infinite;
         }
 
-        /* Las dos barras de la X */
         .la-x-primordial::before,
         .la-x-primordial::after {
             content: '';
@@ -44,26 +69,19 @@
             box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
         }
 
-        /* Barra 1 */
-        .la-x-primordial::before {
-            top: 0; left: 22px;
-            width: 6px; height: 50px;
-            transform: rotate(45deg);
-        }
+        .la-x-primordial::before { top: 0; left: 22px; width: 6px; height: 50px; transform: rotate(45deg); }
+        .la-x-primordial::after { top: 22px; left: 0; width: 50px; height: 6px; transform: rotate(45deg); }
 
-        /* Barra 2 */
-        .la-x-primordial::after {
-            top: 22px; left: 0;
-            width: 50px; height: 6px;
-            transform: rotate(45deg);
+        /* Animación de Respiración (Solo cuando esté listo) */
+        .listo .la-x-primordial {
+            animation: respirar-x 3s ease-in-out infinite;
         }
 
         @keyframes respirar-x {
-            0%, 100% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.2); opacity: 1; filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.8)); }
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 5px red); }
+            50% { transform: scale(1.2); filter: drop-shadow(0 0 15px red); }
         }
 
-        /* Limpieza de Leaflet */
         .leaflet-control-attribution { display: none !important; }
         .leaflet-container { background: #000 !important; }
     </style>
@@ -72,7 +90,8 @@
 
     <div id="map"></div>
     
-    <div id="organismo-x">
+    <div id="organismo-x" class="bloqueado">
+        <div id="halo-nebulosa"></div>
         <div class="la-x-primordial"></div>
     </div>
 
@@ -87,48 +106,59 @@
         let map;
 
         async function init() {
-            // Mapa modo oscuro
-            map = L.map('map', { 
-                zoomControl: false,
-                center: [23.6, -102.5],
-                zoom: 5
-            });
+            map = L.map('map', { zoomControl: false, center: [23.6, -102.5], zoom: 5 });
 
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-            // Cargar marcas previas
+            // Cargar marcas
             const { data: marcas } = await _supabase.from('marcas').select('*');
             if (marcas) {
                 marcas.forEach(m => estamparEnMapa(m.latitud, m.longitud, m.emoji));
             }
 
-            // GATILLO: Al tocar la X
+            // Lógica de Localización y Activación
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(p => {
+                    const lat = p.coords.latitude;
+                    const lng = p.coords.longitude;
+
+                    // Volar a la ubicación
+                    map.flyTo([lat, lng], 16, { duration: 2 });
+
+                    // Activar al terminar el movimiento
+                    map.once('moveend', () => {
+                        activarOrganismo();
+                    });
+                }, () => {
+                    // Si falla el GPS o lo niegan, activamos tras 5s en la vista actual
+                    setTimeout(activarOrganismo, 5000);
+                });
+            }
+
+            // Acción del Sello
             document.getElementById('organismo-x').addEventListener('click', async () => {
                 const emoji = prompt("¿Qué pictograma vas a estampar?");
-                
                 if (emoji && emoji.trim() !== "") {
                     const centro = map.getCenter();
                     estamparEnMapa(centro.lat, centro.lng, emoji);
-                    
-                    await _supabase.from('marcas').insert([
-                        { latitud: centro.lat, longitud: centro.lng, emoji: emoji }
-                    ]);
+                    await _supabase.from('marcas').insert([{ latitud: centro.lat, longitud: centro.lng, emoji: emoji }]);
                 }
             });
+        }
 
-            // GPS inicial
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(p => {
-                    map.setView([p.coords.latitude, p.coords.longitude], 16);
-                });
-            }
+        function activarOrganismo() {
+            const org = document.getElementById('organismo-x');
+            const halo = document.getElementById('halo-nebulosa');
+            
+            if (halo) halo.style.display = 'none';
+            org.classList.replace('bloqueado', 'listo');
         }
 
         function estamparEnMapa(lat, lng, emoji) {
             L.marker([lat, lng], {
                 icon: L.divIcon({
                     className: 'sello',
-                    html: `<div style="font-size:40px; transform: translate(-50%, -50%);">${emoji}</div>`,
+                    html: `<div style="font-size:40px; transform: translate(-50%, -50%); text-align:center;">${emoji}</div>`,
                     iconSize: [0, 0]
                 })
             }).addTo(map);
