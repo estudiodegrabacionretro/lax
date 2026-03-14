@@ -2,12 +2,13 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>LA X - MISION CUMPLIDA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LA X</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #000; }
-        #map { height: 100vh; width: 100vw; }
+        /* Regla de oro: El contenedor DEBE tener altura o se verá blanco */
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; }
+        #map { height: 100vh; width: 100vw; position: absolute; top: 0; left: 0; }
         .leaflet-control-attribution { display: none !important; }
     </style>
 </head>
@@ -16,42 +17,40 @@
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        function init() {
-            // MÓDULO 1: EL ESCENARIO
-            const map = L.map('map', {
-                zoomControl: false,
-                inertia: true
-            }).setView([0, 0], 2);
 
+    <script>
+        // MÓDULO 1 Y 2 UNIFICADOS (KISS)
+        function iniciarApp() {
+            // Inicializar el mapa en un punto neutral (Caja 1)
+            const map = L.map('map', { zoomControl: false }).setView([23.6, -102.5], 5);
+
+            // Cargar las imágenes del mapa
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-            // MÓDULO 2: LA DECISIÓN Y LA ACCIÓN (Caja Única)
-            // EL GATILLO
+            // GATILLO: La Decisión y la Acción (Caja 2)
             map.on('click', function(e) {
-                // LA DECISIÓN: Panel nativo (KISS)
                 const emoji = prompt("¿Qué pictograma quieres estampar?");
-                
                 if (emoji) {
-                    // LA ACCIÓN: Estampado
                     L.marker(e.latlng, {
                         icon: L.divIcon({
                             className: 'sello',
-                            html: `<div style="font-size:40px; margin-top:-20px; margin-left:-20px;">${emoji}</div>`,
+                            html: `<div style="font-size:40px; margin-left:-20px; margin-top:-20px;">${emoji}</div>`,
                             iconSize: [0, 0]
                         })
                     }).addTo(map);
                 }
             });
 
-            // UBICACIÓN (GPS)
+            // GPS: Mover a tu ubicación
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition((pos) => {
                     map.setView([pos.coords.latitude, pos.coords.longitude], 16);
-                }, null, { enableHighAccuracy: true });
+                });
             }
         }
-        window.onload = init;
+
+        // Ejecutar cuando todo esté cargado
+        window.onload = iniciarApp;
     </script>
 </body>
 </html>
