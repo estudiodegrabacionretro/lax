@@ -3,54 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LA X</title>
+    <title>LA X - V3</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* Regla de oro: El contenedor DEBE tener altura o se verá blanco */
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; }
-        #map { height: 100vh; width: 100vw; position: absolute; top: 0; left: 0; }
+        #map { height: 100vh; width: 100vw; position: absolute; }
         .leaflet-control-attribution { display: none !important; }
     </style>
 </head>
 <body>
-
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-        // MÓDULO 1 Y 2 UNIFICADOS (KISS)
-        function iniciarApp() {
-            // Inicializar el mapa en un punto neutral (Caja 1)
-            const map = L.map('map', { zoomControl: false }).setView([23.6, -102.5], 5);
+        const SUPABASE_URL = "https://echdpjhzjsaqtvdrkgaj.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjaGRwamh6anNhcXR2ZHJrZ2FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTA2NTYsImV4cCI6MjA4ODk4NjY1Nn0.8_E_jXsoA8JSgQ-PSNRNc-vqePqFeEDWHiy5YFgc8oo";
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-            // Cargar las imágenes del mapa
+        let map;
+
+        async function init() {
+            map = L.map('map', { zoomControl: false }).setView([23.6, -102.5], 5);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-            // GATILLO: La Decisión y la Acción (Caja 2)
-            map.on('click', function(e) {
+            // CARGAR MEMORIA (Descargar marcas previas)
+            const { data: marcas, error: loadError } = await _supabase.from('marcas').select('*');
+            if (marcas) {
+                marcas.forEach(m => {
+                    estamparEnMapa(m.latitud, m.longitud, m.emoji);
+                });
+            }
+
+            // GATILLO: LA DECISIÓN Y LA ACCIÓN
+            map.on('click', async function(e) {
                 const emoji = prompt("¿Qué pictograma quieres estampar?");
-                if (emoji) {
-                    L.marker(e.latlng, {
-                        icon: L.divIcon({
-                            className: 'sello',
-                            html: `<div style="font-size:40px; margin-left:-20px; margin-top:-20px;">${emoji}</div>`,
-                            iconSize: [0, 0]
-                        })
-                    }).addTo(map);
+                if (emoji && emoji.trim() !== "") {
+                    // Acción visual inmediata
+                    estamparEnMapa(e.latlng.lat, e.latlng.lng, emoji);
+                    
+                    // Acción de memoria (Supabase)
+                    const { error } = await _supabase.from('marcas').insert([
+                        { latitud: e.latlng.lat, longitud: e.latlng.lng, emoji: emoji }
+                    ]);
+                    if (error) console.error("Error al guardar:", error);
                 }
             });
 
-            // GPS: Mover a tu ubicación
+            // UBICACIÓN
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition((pos) => {
-                    map.setView([pos.coords.latitude, pos.coords.longitude], 16);
+                navigator.geolocation.getCurrentPosition(p => {
+                    map.setView([p.coords.latitude, p.coords.longitude], 16);
                 });
             }
         }
 
-        // Ejecutar cuando todo esté cargado
-        window.onload = iniciarApp;
+        function estamparEnMapa(lat, lng, emoji) {
+            L.marker([lat, lng], {
+                icon: L.divIcon({
+                    className: 'sello',
+                    html: `<div style="font-size:40px; margin-left:-20px; margin-top:-20px;">${emoji}</div>`,
+                    iconSize: [0, 0]
+                })
+            }).addTo(map);
+        }
+
+        window.onload = init;
     </script>
 </body>
 </html>
