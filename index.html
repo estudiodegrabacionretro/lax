@@ -125,16 +125,24 @@
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-            // 1. Carga con prioridad de mapeo corregida
-            const { data: marcas } = await _supabase.from('marcas').select('*');
+            // 1. Carga con Debug
+            const { data: marcas, error: loadError } = await _supabase.from('marcas').select('*');
+            
+            if (loadError) {
+                alert("Error cargando: " + loadError.message);
+                console.error(loadError);
+            }
+            
             if (marcas) {
+                console.log("Marcas recuperadas:", marcas.length);
                 marcas.forEach(m => {
-                    // 1. Intentar usar la posición con Jitter (render)
-                    // 2. Si no existe, usar la original (latitud)
-                    const lta = m.lat_render || m.latitud; 
-                    const lng = m.lng_render || m.longitud;
-
-                    estamparEnMapa(lta, lng, m.emoji);
+                    // Mapeo flexible: intenta render, luego latitud (imagen), luego lat
+                    const lta = m.lat_render || m.latitud || m.lat;
+                    const lng = m.lng_render || m.longitud || m.lng;
+                    
+                    if (lta && lng) {
+                        estamparEnMapa(lta, lng, m.emoji);
+                    }
                 });
             }
 
@@ -147,26 +155,31 @@
                 }, () => setTimeout(activarOrganismo, 5000));
             }
 
-            // 2. Evento del click con guardado redundante para compatibilidad
+            // 2. Inserción con Verificación Exhaustiva
             document.getElementById('organismo-x').addEventListener('click', async () => {
                 const emoji = prompt("¿Qué pictograma vas a estampar?");
                 if (emoji && emoji.trim() !== "") {
                     const centro = map.getCenter();
-                    
                     const coords = generarCoordenadasInmutables(centro.lat, centro.lng);
                     
-                    estamparEnMapa(coords.lat_render, coords.lng_render, emoji);
-                    
-                    // Inserción con mapeo de columnas viejas y nuevas
-                    await _supabase.from('marcas').insert([{ 
+                    const payload = { 
                         lat_render: coords.lat_render, 
                         lng_render: coords.lng_render, 
                         lat_origen: coords.lat_origen, 
                         lng_origen: coords.lng_origen,
-                        latitud: coords.lat_origen,   
-                        longitud: coords.lng_origen,  
+                        latitud: coords.lat_origen,   // Coincide con tu imagen
+                        longitud: coords.lng_origen,  // Coincide con tu imagen
                         emoji: emoji 
-                    }]);
+                    };
+
+                    const { error: insertError } = await _supabase.from('marcas').insert([payload]);
+                    
+                    if (insertError) {
+                        alert("Error al guardar: " + insertError.message);
+                        console.error("Detalle:", insertError);
+                    } else {
+                        estamparEnMapa(coords.lat_render, coords.lng_render, emoji);
+                    }
                 }
             });
         }
