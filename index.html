@@ -105,7 +105,7 @@
         let map;
 
         // 1. Variables de Control
-        const JITTER_FACTOR = 0.0001;
+        const JITTER_FACTOR = 0.0005;
 
         // 2. Función de Procesamiento de Coordenadas
         function generarCoordenadasInmutables(lat, lng) {
@@ -121,33 +121,23 @@
         }
 
         async function init() {
-            // Módulo 1: Escenario Leaflet
             map = L.map('map', { zoomControl: false, center: [23.6, -102.5], zoom: 5 });
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-            // Carga inicial con Saneamiento de Marcas Antiguas
+            // 1. Carga con prioridad de mapeo corregida
             const { data: marcas } = await _supabase.from('marcas').select('*');
             if (marcas) {
                 marcas.forEach(m => {
-                    let lta, lng;
+                    // 1. Intentar usar la posición con Jitter (render)
+                    // 2. Si no existe, usar la original (latitud)
+                    const lta = m.lat_render || m.latitud; 
+                    const lng = m.lng_render || m.longitud;
 
-                    if (m.lat_render && m.lng_render) {
-                        // Marca moderna: posición inmutable
-                        lta = m.lat_render;
-                        lng = m.lng_render;
-                    } else {
-                        // Marca antigua: Jitter visual temporal para consistencia estética
-                        const coordsTemp = generarCoordenadasInmutables(m.lat || m.latitud, m.lng || m.longitud);
-                        lta = coordsTemp.lat_render;
-                        lng = coordsTemp.lng_render;
-                    }
-                    
                     estamparEnMapa(lta, lng, m.emoji);
                 });
             }
 
-            // Localización
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(p => {
                     const lat = p.coords.latitude;
@@ -157,24 +147,24 @@
                 }, () => setTimeout(activarOrganismo, 5000));
             }
 
-            // Acción del Sello: Flujo Inmutable
+            // 2. Evento del click con guardado redundante para compatibilidad
             document.getElementById('organismo-x').addEventListener('click', async () => {
                 const emoji = prompt("¿Qué pictograma vas a estampar?");
                 if (emoji && emoji.trim() !== "") {
                     const centro = map.getCenter();
                     
-                    // Cálculo de coordenadas (lat_render, lng_render, lat_origen, lng_origen)
                     const coords = generarCoordenadasInmutables(centro.lat, centro.lng);
                     
-                    // Estampado visual inmediato
                     estamparEnMapa(coords.lat_render, coords.lng_render, emoji);
                     
-                    // Persistencia en Base de Datos
+                    // Inserción con mapeo de columnas viejas y nuevas
                     await _supabase.from('marcas').insert([{ 
                         lat_render: coords.lat_render, 
                         lng_render: coords.lng_render, 
                         lat_origen: coords.lat_origen, 
                         lng_origen: coords.lng_origen,
+                        latitud: coords.lat_origen,   
+                        longitud: coords.lng_origen,  
                         emoji: emoji 
                     }]);
                 }
