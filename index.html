@@ -144,4 +144,94 @@
         });
 
         function generarCoordenadasInmutables(lat, lng) {
-            const offsetLat = (Math
+            const offsetLat = (Math.random() * 2 - 1) * JITTER_FACTOR;
+            const offsetLng = (Math.random() * 2 - 1) * JITTER_FACTOR;
+            return {
+                lat_render: lat + offsetLat,
+                lng_render: lng + offsetLng,
+                lat_origen: lat,
+                lng_origen: lng
+            };
+        }
+
+        async function init() {
+            map = L.map('map', { zoomControl: false, center: [23.6, -102.5], zoom: 5 });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            map.addLayer(markers);
+
+            const { data: marcas } = await _supabase.from('marcas').select('*');
+            if (marcas) {
+                marcas.forEach(m => {
+                    const lta = m.lat_render || m.latitud;
+                    const lng = m.lng_render || m.longitud;
+                    if (lta && lng) añadirAlCluster(lta, lng, m.emoji);
+                });
+            }
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(p => {
+                    const lat = p.coords.latitude;
+                    const lng = p.coords.longitude;
+                    map.flyTo([lat, lng], 16, { duration: 2 });
+                    map.once('moveend', activarOrganismo);
+                }, () => setTimeout(activarOrganismo, 3000));
+            }
+
+            document.getElementById('organismo-x').addEventListener('click', async () => {
+                const org = document.getElementById('organismo-x');
+                org.style.pointerEvents = 'none';
+                org.style.opacity = '0.3';
+
+                navigator.geolocation.getCurrentPosition(async (p) => {
+                    const lat = p.coords.latitude;
+                    const lng = p.coords.longitude;
+                    const emoji = prompt("¿Qué pictograma vas a estampar en tu ubicación real?");
+                    
+                    if (emoji && emoji.trim() !== "") {
+                        const coords = generarCoordenadasInmutables(lat, lng);
+                        const payload = { 
+                            lat_render: coords.lat_render, 
+                            lng_render: coords.lng_render, 
+                            latitud: coords.lat_origen,   
+                            longitud: coords.lng_origen,  
+                            emoji: emoji 
+                        };
+
+                        const { error } = await _supabase.from('marcas').insert([payload]);
+                        if (!error) {
+                            añadirAlCluster(coords.lat_render, coords.lng_render, emoji);
+                            map.flyTo([lat, lng], 16, { duration: 1.5 });
+                        }
+                    }
+                    org.style.pointerEvents = 'auto';
+                    org.style.opacity = '1';
+                }, () => {
+                    alert("El Organismo exige presencia física. Activa el GPS.");
+                    org.style.pointerEvents = 'auto';
+                    org.style.opacity = '1';
+                }, { enableHighAccuracy: true });
+            });
+        }
+
+        function activarOrganismo() {
+            const org = document.getElementById('organismo-x');
+            const halo = document.getElementById('halo-nebulosa');
+            if (halo) halo.style.display = 'none';
+            org.classList.replace('bloqueado', 'listo');
+        }
+
+        function añadirAlCluster(lat, lng, emoji) {
+            const newMarker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    className: 'sello',
+                    html: `<div style="font-size:35px; transform: translate(-50%, -50%);">${emoji}</div>`,
+                    iconSize: [0, 0]
+                })
+            });
+            markers.addLayer(newMarker);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
