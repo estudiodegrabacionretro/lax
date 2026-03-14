@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Una equis marcará el lugar</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <style>
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #fff; overflow: hidden; }
         #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; }
@@ -24,23 +26,12 @@
             transition: opacity 0.5s ease;
         }
 
-        /* ESTADO BLOQUEADO */
-        #organismo-x.bloqueado {
-            pointer-events: none;
-            opacity: 0.3;
-        }
+        #organismo-x.bloqueado { pointer-events: none; opacity: 0.3; }
+        #organismo-x.listo { pointer-events: auto; opacity: 1; }
 
-        /* ESTADO LISTO */
-        #organismo-x.listo {
-            pointer-events: auto;
-            opacity: 1;
-        }
-
-        /* LA NEBULOSA */
         #halo-nebulosa {
             position: absolute;
-            width: 70px;
-            height: 70px;
+            width: 70px; height: 70px;
             border-radius: 50%;
             border: 2px solid transparent;
             border-top: 3px solid #ff0000;
@@ -53,11 +44,9 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* LA X PRIMORDIAL */
         .la-x-primordial {
             position: relative;
-            width: 50px;
-            height: 50px;
+            width: 50px; height: 50px;
         }
 
         .la-x-primordial::before,
@@ -72,14 +61,32 @@
         .la-x-primordial::before { top: 0; left: 22px; width: 6px; height: 50px; transform: rotate(45deg); }
         .la-x-primordial::after { top: 22px; left: 0; width: 50px; height: 6px; transform: rotate(45deg); }
 
-        /* Animación de Respiración */
-        .listo .la-x-primordial {
-            animation: respirar-x 3s ease-in-out infinite;
-        }
+        .listo .la-x-primordial { animation: respirar-x 3s ease-in-out infinite; }
 
         @keyframes respirar-x {
             0%, 100% { transform: scale(1); filter: drop-shadow(0 0 5px red); }
             50% { transform: scale(1.2); filter: drop-shadow(0 0 15px red); }
+        }
+
+        /* Estilo del Cluster Rojo Pulsante */
+        .cluster-rojo {
+            background: rgba(255, 0, 0, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #ff0000;
+            color: #ff0000;
+            font-weight: bold;
+            font-family: monospace;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+            animation: pulso-cluster 2s infinite;
+        }
+
+        @keyframes pulso-cluster {
+            0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 0, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
         }
 
         .leaflet-control-attribution { display: none !important; }
@@ -95,6 +102,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
@@ -103,15 +111,25 @@
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let map;
+        const JITTER_FACTOR = 0.0001;
 
-        // 1. Variables de Control
-        const JITTER_FACTOR = 0.0005;
+        // Grupo de Clusters Global
+        const markers = L.markerClusterGroup({
+            iconCreateFunction: function(cluster) {
+                const childCount = cluster.getChildCount();
+                return L.divIcon({ 
+                    html: `<div><span>${childCount}</span></div>`, 
+                    className: 'cluster-rojo', 
+                    iconSize: [40, 40] 
+                });
+            },
+            showCoverageOnHover: false,
+            spiderfyOnMaxZoom: true
+        });
 
-        // 2. Función de Procesamiento de Coordenadas
         function generarCoordenadasInmutables(lat, lng) {
             const offsetLat = (Math.random() * 2 - 1) * JITTER_FACTOR;
             const offsetLng = (Math.random() * 2 - 1) * JITTER_FACTOR;
-            
             return {
                 lat_render: lat + offsetLat,
                 lng_render: lng + offsetLng,
@@ -122,26 +140,20 @@
 
         async function init() {
             map = L.map('map', { zoomControl: false, center: [23.6, -102.5], zoom: 5 });
-
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-            // 1. Carga con Debug
-            const { data: marcas, error: loadError } = await _supabase.from('marcas').select('*');
             
-            if (loadError) {
-                alert("Error cargando: " + loadError.message);
-                console.error(loadError);
-            }
+            // Añadir el grupo de clusters al mapa
+            map.addLayer(markers);
+
+            const { data: marcas, error: loadError } = await _supabase.from('marcas').select('*');
+            if (loadError) alert("Error cargando: " + loadError.message);
             
             if (marcas) {
-                console.log("Marcas recuperadas:", marcas.length);
                 marcas.forEach(m => {
-                    // Mapeo flexible: intenta render, luego latitud (imagen), luego lat
                     const lta = m.lat_render || m.latitud || m.lat;
                     const lng = m.lng_render || m.longitud || m.lng;
-                    
                     if (lta && lng) {
-                        estamparEnMapa(lta, lng, m.emoji);
+                        añadirAlCluster(lta, lng, m.emoji);
                     }
                 });
             }
@@ -155,7 +167,6 @@
                 }, () => setTimeout(activarOrganismo, 5000));
             }
 
-            // 2. Inserción con Verificación Exhaustiva
             document.getElementById('organismo-x').addEventListener('click', async () => {
                 const emoji = prompt("¿Qué pictograma vas a estampar?");
                 if (emoji && emoji.trim() !== "") {
@@ -167,18 +178,16 @@
                         lng_render: coords.lng_render, 
                         lat_origen: coords.lat_origen, 
                         lng_origen: coords.lng_origen,
-                        latitud: coords.lat_origen,   // Coincide con tu imagen
-                        longitud: coords.lng_origen,  // Coincide con tu imagen
+                        latitud: coords.lat_origen,   
+                        longitud: coords.lng_origen,  
                         emoji: emoji 
                     };
 
                     const { error: insertError } = await _supabase.from('marcas').insert([payload]);
-                    
                     if (insertError) {
                         alert("Error al guardar: " + insertError.message);
-                        console.error("Detalle:", insertError);
                     } else {
-                        estamparEnMapa(coords.lat_render, coords.lng_render, emoji);
+                        añadirAlCluster(coords.lat_render, coords.lng_render, emoji);
                     }
                 }
             });
@@ -191,14 +200,15 @@
             org.classList.replace('bloqueado', 'listo');
         }
 
-        function estamparEnMapa(lat, lng, emoji) {
-            L.marker([lat, lng], {
+        function añadirAlCluster(lat, lng, emoji) {
+            const newMarker = L.marker([lat, lng], {
                 icon: L.divIcon({
                     className: 'sello',
                     html: `<div style="font-size:40px; transform: translate(-50%, -50%); text-align:center;">${emoji}</div>`,
                     iconSize: [0, 0]
                 })
-            }).addTo(map);
+            });
+            markers.addLayer(newMarker);
         }
 
         window.onload = init;
