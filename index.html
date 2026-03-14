@@ -3,21 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LA X - V3</title>
+    <title>LA X - ORGANISMO</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; }
-        #map { height: 100vh; width: 100vw; position: absolute; }
+        /* Estética Base */
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; overflow: hidden; }
+        #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; }
+        
+        /* El Pin Rojo: El Organismo que respira */
+        #pin-organico {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, #ff0000 0%, #8b0000 100%);
+            border-radius: 50%;
+            z-index: 999;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            /* Animación de respiración */
+            animation: respirar 4s ease-in-out infinite;
+        }
+
+        @keyframes respirar {
+            0%, 100% { transform: translateX(-50%) scale(1); box-shadow: 0 0 15px rgba(255, 0, 0, 0.4); }
+            50% { transform: translateX(-50%) scale(1.1); box-shadow: 0 0 30px rgba(255, 0, 0, 0.8); }
+        }
+
+        /* Limpieza de interfaz */
         .leaflet-control-attribution { display: none !important; }
+        .leaflet-container { background: #000 !important; }
     </style>
 </head>
 <body>
+
     <div id="map"></div>
+    
+    <div id="pin-organico"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
+        // Configuración de Conexión
         const SUPABASE_URL = "https://echdpjhzjsaqtvdrkgaj.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjaGRwamh6anNhcXR2ZHJrZ2FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTA2NTYsImV4cCI6MjA4ODk4NjY1Nn0.8_E_jXsoA8JSgQ-PSNRNc-vqePqFeEDWHiy5YFgc8oo";
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -25,33 +56,44 @@
         let map;
 
         async function init() {
-            map = L.map('map', { zoomControl: false }).setView([23.6, -102.5], 5);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            // Mapa modo oscuro (CartoDB Dark Matter)
+            map = L.map('map', { 
+                zoomControl: false,
+                center: [23.6, -102.5],
+                zoom: 5
+            });
 
-            // CARGAR MEMORIA (Descargar marcas previas)
-            const { data: marcas, error: loadError } = await _supabase.from('marcas').select('*');
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19
+            }).addTo(map);
+
+            // Cargar marcas de Supabase
+            const { data: marcas } = await _supabase.from('marcas').select('*');
             if (marcas) {
-                marcas.forEach(m => {
-                    estamparEnMapa(m.latitud, m.longitud, m.emoji);
-                });
+                marcas.forEach(m => estamparEnMapa(m.latitud, m.longitud, m.emoji));
             }
 
-            // GATILLO: LA DECISIÓN Y LA ACCIÓN
-            map.on('click', async function(e) {
-                const emoji = prompt("¿Qué pictograma quieres estampar?");
+            // Gatillo: El Pin Rojo llama a la acción
+            document.getElementById('pin-organico').addEventListener('click', async () => {
+                // Por ahora usamos el prompt para no perder la conexión con la DB, 
+                // en el siguiente paso lo cambiaremos por la Consola Fullscreen.
+                const emoji = prompt("¿Qué pictograma quieres estampar en este centro?");
+                
                 if (emoji && emoji.trim() !== "") {
-                    // Acción visual inmediata
-                    estamparEnMapa(e.latlng.lat, e.latlng.lng, emoji);
+                    const centro = map.getCenter();
                     
-                    // Acción de memoria (Supabase)
+                    // Acción Visual
+                    estamparEnMapa(centro.lat, centro.lng, emoji);
+                    
+                    // Acción en Memoria
                     const { error } = await _supabase.from('marcas').insert([
-                        { latitud: e.latlng.lat, longitud: e.latlng.lng, emoji: emoji }
+                        { latitud: centro.lat, longitud: centro.lng, emoji: emoji }
                     ]);
                     if (error) console.error("Error al guardar:", error);
                 }
             });
 
-            // UBICACIÓN
+            // GPS inicial
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(p => {
                     map.setView([p.coords.latitude, p.coords.longitude], 16);
@@ -63,7 +105,7 @@
             L.marker([lat, lng], {
                 icon: L.divIcon({
                     className: 'sello',
-                    html: `<div style="font-size:40px; margin-left:-20px; margin-top:-20px;">${emoji}</div>`,
+                    html: `<div style="font-size:40px; transform: translate(-50%, -50%); text-align: center;">${emoji}</div>`,
                     iconSize: [0, 0]
                 })
             }).addTo(map);
