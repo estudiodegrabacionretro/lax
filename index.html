@@ -2,13 +2,15 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Una equis marcará el lugar</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <style>
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
-        #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; }
+        #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; background: #000; }
 
+        /* EL ORGANISMO X */
         #organismo-x {
             position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
             width: 100px; height: 100px; z-index: 999;
@@ -26,6 +28,7 @@
         .la-x-primordial::after { top: 22px; left: 0; width: 50px; height: 6px; transform: rotate(45deg); }
         .listo .la-x-primordial { animation: respirar-x 3s ease-in-out infinite; }
 
+        /* CONSOLA */
         #consola {
             position: fixed; bottom: -100%; left: 0; width: 100%; height: 85%;
             background: rgba(5, 5, 5, 0.98); backdrop-filter: blur(35px);
@@ -34,20 +37,14 @@
             display: flex; flex-direction: column;
         }
         #consola.abierta { bottom: 0; }
-
         .consola-header { padding: 20px 25px 10px 25px; display: flex; justify-content: flex-end; }
-        .btn-cerrar { color: #ff0000; font-size: 35px; cursor: pointer; opacity: 0.8; line-height: 1; }
+        .btn-cerrar { color: #ff0000; font-size: 35px; cursor: pointer; opacity: 0.8; }
 
         .emoji-grid {
             flex: 1; display: grid; grid-template-columns: repeat(8, 1fr);
             gap: 5px; padding: 0 10px 20px 10px; overflow-y: auto; align-content: start;
-            scrollbar-width: none;
         }
-        .emoji-grid::-webkit-scrollbar { display: none; }
-        .emoji-item {
-            font-size: 34px; text-align: center; cursor: pointer; padding: 8px 0;
-            transition: transform 0.1s; -webkit-tap-highlight-color: transparent;
-        }
+        .emoji-item { font-size: 34px; text-align: center; cursor: pointer; padding: 8px 0; transition: transform 0.1s; }
         .emoji-item:active { transform: scale(1.5); }
 
         .consola-nav {
@@ -56,8 +53,22 @@
             padding-bottom: env(safe-area-inset-bottom);
             border-top: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .nav-tab { font-size: 38px; cursor: pointer; opacity: 0.2; transition: 0.3s; padding: 10px; }
-        .nav-tab.active { opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 8px rgba(255,255,255,0.3)); }
+        .nav-tab { font-size: 38px; cursor: pointer; opacity: 0.2; transition: 0.3s; }
+        .nav-tab.active { opacity: 1; transform: scale(1.15); }
+
+        /* ESTILO DEL PANAL (CLUSTER) */
+        .cluster-panal {
+            background: rgba(255, 191, 0, 0.6); /* Color Ámbar */
+            border: 2px solid #ffcc00;
+            border-radius: 50%; /* Puedes usar clip-path para hexágono si lo deseas */
+            color: white;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px rgba(255, 204, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
 
         @keyframes girar-nebulosa { 100% { transform: rotate(360deg); } }
         #halo-nebulosa {
@@ -92,39 +103,39 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
         const SUPABASE_URL = "https://echdpjhzjsaqtvdrkgaj.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjaGRwamh6anNhcXR2ZHJrZ2FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTA2NTYsImV4cCI6MjA4ODk4NjY1Nn0.8_E_jXsoA8JSgQ-PSNRNc-vqePqFeEDWHiy5YFgc8oo";
+        const SUPABASE_KEY = "TU_KEY_AQUI"; // Usar la que me pasaste
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let map;
+        let map, clusterGroup;
 
-        const BIBLIOTECA = {
-            "c1": [
-                '😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','🫠','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','😋','😛','😜','🤪','😝','🤑','🤗','🫣','🤭','🥱','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','🫨','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','😵‍💫','🤯','🤠','🥳','😎','🤓','🧐','😕','🫤','😟','🙁','😮','😯','😲','😳','🥺','🥹','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','😤','😡','😠','🤬','😈','👿','👹','👺','🤡','💩','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😻','😼','😽','🙀','😿','😾','🤲','👐','🙌','👏','🙏','🤝','👍','👎','👊','✊','🤛','🤜','🤞','🤟','🤘','👌','🤌','🤏','👈','👉','👆','👇','💪','🦵','👂','👃','🧠','🦷','👅','🫦','👶','🧒','👦','👧','🧑','👨','👩','👱','🧔','👵','👴','👲','👳','🧕','👮','👷','🕵️','💂','🤴','👸','🤵','👰','🤰','🤱','👼','🎅','🤶','🧙','🧚','🧛','🧜','🧞','🧟','🕴️','💃','🕺','🚶','🏃','🧘'
-            ],
-            "c2": [
-                '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐻‍❄️','🐨','🐯','🦁','🐮','🐷','🐽','🐸','🐵','🐒','🦍','🦧','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦢','🦉','🦤','🪶','🦩',' peacock','🦜','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🐘','🦏','🦛','🐪','🐫','🦒','🦘','🦬','🐃','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐈','🐈‍⬛','🐓','🦃','🦚','🦜','🦢','🦩','🕊️','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🦔','🐿️','🐹','🐁','🐀','🐾','🐉','🐲','🌵','🎄','🌲','🌳','🌴','🪵','🌱','🌿','☘️','🍀','🎍','🪴','🎋','🍃','🍂','🍁','🍄','🌾','🪹','🪺','🐚','🪸','🌹','🥀','🌺','🌻','🌼','🌷','🌱','🪴','🏜️','🌋','🏔️','⛰️','🏔️'
-            ],
-            "c3": [
-                '🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌽','🥕','🧄','🧅','🥔','🥐','🥯','🍞','🥖','🥨','🧀','🥚','🍳','🧈','🥓','🥩','🍗','🍖','🌭','🍔','🍟','🍕','🥪','🥙','🌮','🌯','🥗','🥘','🍝','🍜','🍲','🍛','🍣','🍱','🥟','🍤','🍙','🍚','🍘','🍥','🥠','🍧','🍨','🍦','🥧','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪','⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🎱','🏓','🏸','🥅','🏒','🏑','🏏','⛳','🏹','🎣','🤿','🥊','🥋','⛸️','🎿','🛷','🛹','🚴','🏋️','🏊','🚣','🧗','⛹️','🏌️','🏇','🏆','🏅','🎖️','🎭','🎨','🎬','🎤','🎧','🎹','🎸','🎺','🎻'
-            ],
-            "c4": [
-                '🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🏍️','🛵','🚲','🛴','🛹','🚏','🛤️','⛽','🚨','🚥','🚦','🚧','🛑','⚓','⛵','🚤','🛳️','⛴️','🚢','✈️','🛩️','🛫','🛬','🚁','🛰️','🚀','🛸','🌍','🌎','🌏','🌌','🪐','🌑','🌕','🌤️','🌩️','🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏪','🏫','🏬','🏭','🏰','🏯','⛪','🕌','⛩️','🕍','🕋','🏛️','🏙️','🛖','⛲','🎡','🎢','🏖️','🏙️','🌃','⌚','📱','💻','⌨️','🖱️','🖨️','🖥️','📷','📸','📹','📺','📻','🎙️','🎚️','🎛️','🧭','⏱️','⏲️','⏰','⏳','⌛','📡','🔋','🔌','💡','🔦','🕯️','🪔','🧱','⛓️','🧰','🧲','🪜','🔨','⚒️','🛠️','⛏️','🪓','🔩','⚙️','🔧','🔧','🔬','🔭','📡'
-            ],
-            "c5": [
-                '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','💌','💋','🧿','⚠️','🚫','🆘','🔞','☣️','☢️','☯️','✡️','☪️','✝️','☸️','♾️','🆔','🈲','🉐','🈴','㊗️','㊙️','🔘','🔴','🟡','🟢','🔵','🟣','🟤','⚫','⚪','🟥','🟦','🟧','🟨','🟩','🟪','🟫','⬛','⬜','🏁','🚩','🏴','🏳️','🎌','🏳️‍🌈','🏳️‍⚧️','🏴‍☠️','🇪🇨','🇲🇽','🇺🇸','🇪🇸','🇨🇴','🇦🇷','🇨🇱','🇧🇷','🇮🇹','🇫🇷','🇬🇧','🇯🇵','🇨🇳','🇰🇷','🇷🇺','🇦🇺','🇨🇦','🇩🇪','🇮🇳','🇳🇬','🇸🇦','🇿🇦','🇹🇷','🇮🇩','🇻🇳','🇵🇭','🇹🇭','🇲🇾','🇵🇪','🇻🇪','🇧🇴','🇺🇾','🇵🇾','🇵🇷','🇨🇺','🇩🇴','🇨🇷','🇵🇦','🇸🇻','🇬🇹','🇭🇳','🇳🇮','🇮🇱','🇸🇦','🇮🇶','🇮🇷','🇵🇰','🇿🇦','🇪🇬','🇲🇦','🇦🇪'
-            ]
-        };
+        // Biblioteca simplificada para el ejemplo
+        const BIBLIOTECA = { "c1": ['😀','👽','🛸','👻','💀','👾','🤖','🎃'], "c2":['🐻','🐯','🦁','🦒'], "c3":['⚽','🏀','🎾'], "c4":['💡','🚗','🚀'], "c5":['❤️','🇪🇨','🇲🇽'] };
 
         async function init() {
             map = L.map('map', { zoomControl: false, center: [-1.83, -78.18], zoom: 7 });
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-            const { data } = await _supabase.from('marcas').select('*');
-            if (data) data.forEach(m => estamparEnMapa(m.latitud, m.longitud, m.emoji));
+            // Inicializar el grupo de panales
+            clusterGroup = L.markerClusterGroup({
+                iconCreateFunction: function(cluster) {
+                    return L.divIcon({ 
+                        html: `<div>${cluster.getChildCount()}</div>`, 
+                        className: 'cluster-panal', 
+                        iconSize: L.point(40, 40) 
+                    });
+                },
+                showCoverageOnHover: false,
+                maxClusterRadius: 50
+            });
+            map.addLayer(clusterGroup);
+
+            // Cargar solo lo que está VIVO (no ha expirado)
+            await cargarMarcasVivas();
 
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(p => {
@@ -139,33 +150,60 @@
             };
         }
 
-        function cambiarCategoria(cat, elemento) {
-            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            elemento.classList.add('active');
-            const grid = document.getElementById('grid-emojis');
-            const listaLimpia = [...new Set(BIBLIOTECA[cat])];
-            grid.innerHTML = listaLimpia.map(e => `<div class="emoji-item" onclick="seleccionarEmoji('${e}')">${e}</div>`).join('');
-            grid.scrollTop = 0;
+        async function cargarMarcasVivas() {
+            const ahora = new Date().toISOString();
+            const { data } = await _supabase.from('marcas')
+                .select('*')
+                .gt('expira_at', ahora); // FILTRO KISS: Solo marcas con futuro
+
+            if (data) {
+                clusterGroup.clearLayers();
+                data.forEach(m => estamparEnMapa(m.latitud, m.longitud, m.emoji));
+            }
         }
 
         async function seleccionarEmoji(emoji) {
             const centro = map.getCenter();
             cerrarConsola();
-            estamparEnMapa(centro.lat, centro.lng, emoji);
-            await _supabase.from('marcas').insert([{ latitud: centro.lat, longitud: centro.lng, emoji: emoji }]);
-        }
 
-        function cerrarConsola() { document.getElementById('consola').classList.remove('abierta'); }
-        function activarOrganismo() { 
-            const halo = document.getElementById('halo-nebulosa');
-            if (halo) halo.style.display = 'none';
-            document.getElementById('organismo-x').classList.replace('bloqueado', 'listo');
+            // LÓGICA DE EROSIÓN ALEATORIA (6h a 72h)
+            const horasAzar = Math.floor(Math.random() * (72 - 6 + 1)) + 6;
+            const expira = new Date();
+            expira.setHours(expira.getHours() + horasAzar);
+
+            estamparEnMapa(centro.lat, centro.lng, emoji);
+
+            // Guardar con su fecha de muerte programada
+            await _supabase.from('marcas').insert([{ 
+                latitud: centro.lat, 
+                longitud: centro.lng, 
+                emoji: emoji,
+                expira_at: expira.toISOString() 
+            }]);
         }
 
         function estamparEnMapa(lat, lng, emoji) {
-            L.marker([lat, lng], {
-                icon: L.divIcon({ className: 'sello', html: `<div style="font-size:45px; transform: translate(-50%, -50%); filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));">${emoji}</div>`, iconSize: [0, 0] })
-            }).addTo(map);
+            const m = L.marker([lat, lng], {
+                icon: L.divIcon({ 
+                    className: 'sello', 
+                    html: `<div style="font-size:40px; transform: translate(-25%, -25%);">${emoji}</div>`, 
+                    iconSize: [0, 0] 
+                })
+            });
+            clusterGroup.addLayer(m);
+        }
+
+        // Funciones de UI... (cambiarCategoria, cerrarConsola, activarOrganismo iguales)
+        function cambiarCategoria(cat, elemento) {
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            elemento.classList.add('active');
+            const grid = document.getElementById('grid-emojis');
+            grid.innerHTML = BIBLIOTECA[cat].map(e => `<div class="emoji-item" onclick="seleccionarEmoji('${e}')">${e}</div>`).join('');
+        }
+        function cerrarConsola() { document.getElementById('consola').classList.remove('abierta'); }
+        function activarOrganismo() { 
+            document.getElementById('halo-nebulosa').style.display = 'none';
+            document.getElementById('organismo-x').classList.replace('bloqueado', 'listo');
         }
 
         window.onload = init;
