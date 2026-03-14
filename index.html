@@ -7,8 +7,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
-        #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; background: #000; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #f0f0f0; overflow: hidden; font-family: sans-serif; }
+        #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; }
 
         #organismo-x {
             position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
@@ -29,10 +29,10 @@
 
         #consola {
             position: fixed; bottom: -100%; left: 0; width: 100%; height: 85%;
-            background: rgba(5, 5, 5, 0.98); backdrop-filter: blur(35px);
-            -webkit-backdrop-filter: blur(35px); border-radius: 40px 40px 0 0;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px); border-radius: 40px 40px 0 0;
             z-index: 1000; transition: bottom 0.5s cubic-bezier(0.1, 0.9, 0.2, 1);
-            display: flex; flex-direction: column;
+            display: flex; flex-direction: column; box-shadow: 0 -10px 30px rgba(0,0,0,0.1);
         }
         #consola.abierta { bottom: 0; }
 
@@ -53,166 +53,4 @@
 
         .consola-nav {
             height: 95px; display: flex; justify-content: space-around;
-            align-items: center; background: rgba(255, 255, 255, 0.02);
-            padding-bottom: env(safe-area-inset-bottom);
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .nav-tab { font-size: 38px; cursor: pointer; opacity: 0.2; transition: 0.3s; padding: 10px; }
-        .nav-tab.active { opacity: 1; transform: scale(1.15); filter: drop-shadow(0 0 8px rgba(255,255,255,0.3)); }
-
-        .panal-miel {
-            background: rgba(255, 174, 0, 0.8);
-            border: 2px solid #ffaa00;
-            border-radius: 50%;
-            color: #000;
-            font-weight: bold;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 0 20px rgba(255, 166, 0, 0.6);
-            backdrop-filter: blur(5px);
-        }
-
-        @keyframes girar-nebulosa { 100% { transform: rotate(360deg); } }
-        #halo-nebulosa {
-            position: absolute; width: 85px; height: 85px; border-radius: 50%;
-            border: 2px solid transparent; border-top: 3px solid #ff0000;
-            animation: girar-nebulosa 0.8s linear infinite;
-        }
-        @keyframes respirar-x { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
-    </style>
-</head>
-<body>
-
-    <div id="map"></div>
-    
-    <div id="organismo-x" class="bloqueado">
-        <div id="halo-nebulosa"></div>
-        <div class="la-x-primordial"></div>
-    </div>
-
-    <div id="consola">
-        <div class="consola-header">
-            <span class="btn-cerrar" onclick="cerrarConsola()">✕</span>
-        </div>
-        <div class="emoji-grid" id="grid-emojis"></div>
-        <div class="consola-nav">
-            <div class="nav-tab active" onclick="cambiarCategoria('c1', this)">😀</div>
-            <div class="nav-tab" onclick="cambiarCategoria('c2', this)">🐻</div>
-            <div class="nav-tab" onclick="cambiarCategoria('c3', this)">⚽</div>
-            <div class="nav-tab" onclick="cambiarCategoria('c4', this)">💡</div>
-            <div class="nav-tab" onclick="cambiarCategoria('c5', this)">❤️</div>
-        </div>
-    </div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <script>
-        const SUPABASE_URL = "https://echdpjhzjsaqtvdrkgaj.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjaGRwamh6anNhcXR2ZHJrZ2FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTA2NTYsImV4cCI6MjA4ODk4NjY1Nn0.8_E_jXsoA8JSgQ-PSNRNc-vqePqFeEDWHiy5YFgc8oo";
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        let map;
-        let clusterColmena;
-        let userPos = null;
-
-        const BIBLIOTECA = {
-            "c1": ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','🫠','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','😋','😛','😜','🤪','😝','🤑','🤗','🫣','🤭','🥱','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','🫨','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','😵‍💫','🤯','🤠','🥳','😎','🤓','🧐','😕','🫤','😟','🙁','😮','😯','😲','😳','🥺','🥹','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','😤','😡','😠','🤬','😈','👿','👹','👺','🤡','💩','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😻','😼','😽','🙀','😿','😾','🤲','👐','🙌','👏','🙏','🤝','👍','👎','👊','✊','🤛','🤜','🤞','🤟','🤘','👌','🤌','🤏','👈','👉','👆','👇','💪','🦵','👂','👃','🧠','🦷','👅','🫦','👶','🧒','👦','👧','🧑','👨','👩','👱','🧔','👵','👴','👲','👳','🧕','👮','👷','🕵️','💂','🤴','👸','🤵','👰','🤰','🤱','👼','🎅','🤶','🧙','🧚','🧛','🧜','🧞','🧟','🕴️','💃','🕺','🚶','🏃','🧘'],
-            "c2": ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐻‍❄️','🐨','🐯','🦁','🐮','🐷','🐽','🐸','🐵','🐒','🦍','🦧','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦢','🦉','🦤','🪶','🦩','🦚','🦜','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🐘','🦏','🦛','🐪','🐫','🦒','🦘','🦬','🐃','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐈','🐈‍⬛','🐓','🦃','🦚','🦜','🦢','🦩','🕊️','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🦔','🐿️','🐹','🐁','🐀','🐾','🐉','🐲','🌵','🎄','🌲','🌳','🌴','🪵','🌱','🌿','☘️','🍀','🎍','🪴','🎋','🍃','🍂','🍁','🍄','🌾','🪹','🪺','🐚','🪸','🌹','🥀','🌺','🌻','🌼','🌷','🏜️','🌋','🏔️','⛰️'],
-            "c3": ['🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌽','🥕','🧄','🧅','🥔','🥐','🥯','🍞','🥖','🥨','🧀','🥚','🍳','🧈','🥓','🥩','🍗','🍖','🌭','🍔','🍟','🍕','🥪','🥙','🌮','🌯','🥗','🥘','🍝','🍜','🍲','🍛','🍣','🍱','🥟','🍤','🍙','🍚','🍘','🍥','🥠','🍧','🍨','🍦','🥧','🧁','🍰','🎂','🍮','🍭','🍬','🍫','🍿','🍩','🍪','⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🎱','🏓','🏸','🥅','🏒','🏑','🏏','⛳','🏹','🎣','🤿','🥊','🥋','⛸️','🎿','🛷','🛹','🚴','🏋️','🏊','🚣','🧗','⛹️','🏌️','🏇','🏆','🏅','🎖️','🎭','🎨','🎬','🎤','🎧','🎹','🎸','🎺','🎻'],
-            "c4": ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🏍️','🛵','🚲','🛴','🛹','🚏','🛤️','⛽','🚨','🚥','🚦','🚧','🛑','⚓','⛵','🚤','🛳️','⛴️','🚢','✈️','🛩️','🛫','🛬','🚁','🛰️','🚀','🛸','🌍','🌎','🌏','🌌','🪐','🌑','🌕','🌤️','🌩️','🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏪','🏫','🏬','🏭','🏰','🏯','⛪','🕌','⛩️','🕍','🕋','🏛️','🏙️','🛖','⛲','🎡','🎢','🏖️','🏙️','🌃','⌚','📱','💻','⌨','🖱️','🖨️','🖥️','📷','📸','📹','📺','📻','🎙️','🎚️','🎛️','🧭','⏱️','⏲️','⏰','⏳','⌛','📡','🔋','🔌','💡','🔦','🕯️','🪔','🧱','⛓️','🧰','🧲','🪜','🔨','⚒️','🛠️','⛏️','🪓','🔩','⚙️','🔧','🔬','🔭','📡'],
-            "c5": ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','💌','💋','🧿','⚠️','🚫','🆘','🔞','☣️','☢️','☯️','✡️','☪️','✝️','☸️','♾️','🆔','🈲','🉐','🈴','㊗️','㊙️','🔘','🔴','🟡','🟢','🔵','🟣','🟤','⚫','⚪','🟥','🟦','🟧','🟨','🟩','🟪','🟫','⬛','⬜','🏁','🚩','🏴','🏳️','🎌','🏳️‍🌈','🏳️‍⚧️','🏴‍☠️','🇪🇨','🇲🇽','🇺🇸','🇪🇸','🇨🇴','🇦🇷','🇨🇱','🇧🇷','🇮🇹','🇫🇷','🇬🇧','🇯🇵','🇨🇳','🇰🇷','🇷🇺','🇦🇺','🇨🇦','🇩🇪','🇮🇳','🇳🇬','🇸🇦','🇿🇦','🇹🇷','🇮🇩','🇻🇳','🇵🇭','🇹🇭','🇲🇾','🇵🇪','🇻🇪','🇧🇴','🇺🇾','🇵🇾','🇵🇷','🇨🇺','🇩🇴','🇨🇷','🇵🇦','🇸🇻','🇬🇹','🇭🇳','🇳🇮','🇮🇱','🇮🇶','🇮🇷','🇵🇰','🇿🇦','🇪🇬','🇲🇦','🇦🇪']
-        };
-
-        async function init() {
-            map = L.map('map', { zoomControl: false, center: [-1.83, -78.18], zoom: 7 });
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-
-            clusterColmena = L.markerClusterGroup({
-                iconCreateFunction: (cluster) => {
-                    return L.divIcon({ 
-                        html: `<span>${cluster.getChildCount()}</span>`, 
-                        className: 'panal-miel', 
-                        iconSize: L.point(45, 45) 
-                    });
-                },
-                spiderfyOnMaxZoom: true,
-                spiderfyDistanceMultiplier: 2.5,
-                showCoverageOnHover: false,
-                maxClusterRadius: 50,
-                disableClusteringAtZoom: 18
-            });
-            map.addLayer(clusterColmena);
-
-            await cargarMarcasVivas();
-            actualizarGPS(true);
-
-            document.getElementById('organismo-x').onclick = () => {
-                actualizarGPS(false);
-                document.getElementById('consola').classList.add('abierta');
-                cambiarCategoria('c1', document.querySelector('.nav-tab'));
-            };
-        }
-
-        function actualizarGPS(fly) {
-            navigator.geolocation.getCurrentPosition(p => {
-                userPos = [p.coords.latitude, p.coords.longitude];
-                if(fly) map.flyTo(userPos, 16); 
-                else map.setView(userPos, 18);
-                document.getElementById('halo-nebulosa').style.display = 'none';
-                document.getElementById('organismo-x').classList.replace('bloqueado', 'listo');
-            }, null, { enableHighAccuracy: true });
-        }
-
-        async function cargarMarcasVivas() {
-            const ahora = new Date().toISOString();
-            const { data } = await _supabase.from('marcas').select('*').gt('expira_at', ahora);
-            if (data) {
-                clusterColmena.clearLayers();
-                data.forEach(m => estamparEnMapa(m.latitud, m.longitud, m.emoji));
-            }
-        }
-
-        function cambiarCategoria(cat, elemento) {
-            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            elemento.classList.add('active');
-            const grid = document.getElementById('grid-emojis');
-            const listaLimpia = [...new Set(BIBLIOTECA[cat])];
-            grid.innerHTML = listaLimpia.map(e => `<div class="emoji-item" onclick="seleccionarEmoji('${e}')">${e}</div>`).join('');
-            grid.scrollTop = 0;
-        }
-
-        async function seleccionarEmoji(emoji) {
-            if(!userPos) return;
-            cerrarConsola();
-            
-            const horasAzar = Math.floor(Math.random() * (72 - 6 + 1)) + 6;
-            const expira = new Date();
-            expira.setHours(expira.getHours() + horasAzar);
-
-            estamparEnMapa(userPos[0], userPos[1], emoji);
-
-            await _supabase.from('marcas').insert([{ 
-                latitud: userPos[0], 
-                longitud: userPos[1], 
-                emoji: emoji, 
-                expira_at: expira.toISOString() 
-            }]);
-        }
-
-        function estamparEnMapa(lat, lng, emoji) {
-            const marcador = L.marker([lat, lng], {
-                icon: L.divIcon({ 
-                    className: 'sello', 
-                    html: `<div style="font-size:45px; transform: translate(-22px, -22px);">${emoji}</div>`, 
-                    iconSize: [0, 0] 
-                })
-            });
-            clusterColmena.addLayer(marcador);
-        }
-
-        function cerrarConsola() { document.getElementById('consola').classList.remove('abierta'); }
-        window.onload = init;
-    </script>
-</body>
-</html>
+            align-items: center
