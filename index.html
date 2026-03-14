@@ -6,7 +6,6 @@
     <title>Una equis marcará el lugar</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <style>
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #fff; overflow: hidden; }
         #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; }
@@ -68,25 +67,32 @@
             50% { transform: scale(1.2); filter: drop-shadow(0 0 15px red); }
         }
 
-        /* Estilo del Cluster Rojo Pulsante */
-        .cluster-rojo {
-            background: rgba(255, 0, 0, 0.2);
-            border-radius: 50%;
+        /* ESTÉTICA DE MIEL (AGRUPACIÓN) */
+        .cluster-organico {
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 2px solid #ff0000;
-            color: #ff0000;
-            font-weight: bold;
-            font-family: monospace;
-            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
-            animation: pulso-cluster 2s infinite;
         }
 
-        @keyframes pulso-cluster {
-            0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(255, 0, 0, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
+        .gota-miel {
+            background: rgba(255, 180, 0, 0.75); /* Ámbar denso */
+            /* Bordes suaves y asimétricos */
+            border-radius: 45% 55% 50% 50% / 55% 50% 50% 45%; 
+            box-shadow: 
+                inset 0 0 12px rgba(255, 255, 255, 0.5),
+                0 4px 10px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(3px);
+            border: 1.5px solid rgba(218, 165, 32, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .emoji-lider {
+            font-size: 24px;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.15));
+            user-select: none;
         }
 
         .leaflet-control-attribution { display: none !important; }
@@ -113,18 +119,39 @@
         let map;
         const JITTER_FACTOR = 0.0001;
 
-        // Grupo de Clusters Global
+        // GRUPO DE CLUSTERS CON LÓGICA DE MIEL
         const markers = L.markerClusterGroup({
             iconCreateFunction: function(cluster) {
-                const childCount = cluster.getChildCount();
+                const childMarkers = cluster.getAllChildMarkers();
+                const conteo = {};
+                
+                // Extraer y contar emojis para determinar el predominante
+                childMarkers.forEach(m => {
+                    const html = m.options.icon.options.html;
+                    const match = html.match(/>(.*?)</);
+                    if (match && match[1]) {
+                        const emo = match[1];
+                        conteo[emo] = (conteo[emo] || 0) + 1;
+                    }
+                });
+
+                const predominante = Object.keys(conteo).reduce((a, b) => conteo[a] > conteo[b] ? a : b);
+                const count = cluster.getChildCount();
+                
+                // Tamaño dinámico pero contenido
+                const size = Math.min(44 + (count * 1.2), 75); 
+
                 return L.divIcon({ 
-                    html: `<div><span>${childCount}</span></div>`, 
-                    className: 'cluster-rojo', 
-                    iconSize: [40, 40] 
+                    html: `<div class="gota-miel" style="width:${size}px; height:${size}px;">
+                             <span class="emoji-lider">${predominante}</span>
+                           </div>`, 
+                    className: 'cluster-organico', 
+                    iconSize: [size, size] 
                 });
             },
             showCoverageOnHover: false,
-            spiderfyOnMaxZoom: true
+            spiderfyOnMaxZoom: true,
+            maxClusterRadius: 50 
         });
 
         function generarCoordenadasInmutables(lat, lng) {
@@ -142,19 +169,16 @@
             map = L.map('map', { zoomControl: false, center: [23.6, -102.5], zoom: 5 });
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             
-            // Añadir el grupo de clusters al mapa
             map.addLayer(markers);
 
             const { data: marcas, error: loadError } = await _supabase.from('marcas').select('*');
-            if (loadError) alert("Error cargando: " + loadError.message);
+            if (loadError) console.error("Error cargando:", loadError.message);
             
             if (marcas) {
                 marcas.forEach(m => {
                     const lta = m.lat_render || m.latitud || m.lat;
                     const lng = m.lng_render || m.longitud || m.lng;
-                    if (lta && lng) {
-                        añadirAlCluster(lta, lng, m.emoji);
-                    }
+                    if (lta && lng) añadirAlCluster(lta, lng, m.emoji);
                 });
             }
 
@@ -164,7 +188,7 @@
                     const lng = p.coords.longitude;
                     map.flyTo([lat, lng], 16, { duration: 2 });
                     map.once('moveend', activarOrganismo);
-                }, () => setTimeout(activarOrganismo, 5000));
+                }, () => setTimeout(activarOrganismo, 3000));
             }
 
             document.getElementById('organismo-x').addEventListener('click', async () => {
@@ -204,7 +228,7 @@
             const newMarker = L.marker([lat, lng], {
                 icon: L.divIcon({
                     className: 'sello',
-                    html: `<div style="font-size:40px; transform: translate(-50%, -50%); text-align:center;">${emoji}</div>`,
+                    html: `<div style="font-size:35px; transform: translate(-50%, -50%);">${emoji}</div>`,
                     iconSize: [0, 0]
                 })
             });
