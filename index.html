@@ -6,7 +6,7 @@
     <title>LA X - NEBULOSA</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #fff; overflow: hidden; }
         #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; }
 
         /* Contenedor del Organismo */
@@ -24,26 +24,26 @@
             transition: opacity 0.5s ease;
         }
 
-        /* ESTADO BLOQUEADO: La X no responde */
+        /* ESTADO BLOQUEADO */
         #organismo-x.bloqueado {
             pointer-events: none;
             opacity: 0.3;
         }
 
-        /* ESTADO LISTO: La X brilla y late */
+        /* ESTADO LISTO */
         #organismo-x.listo {
             pointer-events: auto;
             opacity: 1;
         }
 
-        /* LA NEBULOSA (Órbita de carga) */
+        /* LA NEBULOSA */
         #halo-nebulosa {
             position: absolute;
             width: 70px;
             height: 70px;
             border-radius: 50%;
             border: 2px solid transparent;
-            border-top: 3px solid #ff0000; /* Arco de luz */
+            border-top: 3px solid #ff0000;
             filter: blur(1px);
             animation: girar-nebulosa 0.8s linear infinite;
         }
@@ -72,7 +72,7 @@
         .la-x-primordial::before { top: 0; left: 22px; width: 6px; height: 50px; transform: rotate(45deg); }
         .la-x-primordial::after { top: 22px; left: 0; width: 50px; height: 6px; transform: rotate(45deg); }
 
-        /* Animación de Respiración (Solo cuando esté listo) */
+        /* Animación de Respiración */
         .listo .la-x-primordial {
             animation: respirar-x 3s ease-in-out infinite;
         }
@@ -83,7 +83,6 @@
         }
 
         .leaflet-control-attribution { display: none !important; }
-        .leaflet-container { background: #000 !important; }
     </style>
 </head>
 <body>
@@ -106,33 +105,25 @@
         let map;
 
         async function init() {
+            // Módulo 1: Escenario OpenStreetMap Estándar
             map = L.map('map', { zoomControl: false, center: [23.6, -102.5], zoom: 5 });
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-            // Cargar marcas
+            // Cargar marcas (Ajustado a nombres de columna lat/lng)
             const { data: marcas } = await _supabase.from('marcas').select('*');
             if (marcas) {
-                marcas.forEach(m => estamparEnMapa(m.latitud, m.longitud, m.emoji));
+                marcas.forEach(m => estamparEnMapa(m.lat || m.latitud, m.lng || m.longitud, m.emoji));
             }
 
-            // Lógica de Localización y Activación
+            // Localización
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(p => {
                     const lat = p.coords.latitude;
                     const lng = p.coords.longitude;
-
-                    // Volar a la ubicación
                     map.flyTo([lat, lng], 16, { duration: 2 });
-
-                    // Activar al terminar el movimiento
-                    map.once('moveend', () => {
-                        activarOrganismo();
-                    });
-                }, () => {
-                    // Si falla el GPS o lo niegan, activamos tras 5s en la vista actual
-                    setTimeout(activarOrganismo, 5000);
-                });
+                    map.once('moveend', activarOrganismo);
+                }, () => setTimeout(activarOrganismo, 5000));
             }
 
             // Acción del Sello
@@ -141,7 +132,7 @@
                 if (emoji && emoji.trim() !== "") {
                     const centro = map.getCenter();
                     estamparEnMapa(centro.lat, centro.lng, emoji);
-                    await _supabase.from('marcas').insert([{ latitud: centro.lat, longitud: centro.lng, emoji: emoji }]);
+                    await _supabase.from('marcas').insert([{ lat: centro.lat, lng: centro.lng, emoji: emoji }]);
                 }
             });
         }
@@ -149,7 +140,6 @@
         function activarOrganismo() {
             const org = document.getElementById('organismo-x');
             const halo = document.getElementById('halo-nebulosa');
-            
             if (halo) halo.style.display = 'none';
             org.classList.replace('bloqueado', 'listo');
         }
