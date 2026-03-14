@@ -10,7 +10,6 @@
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #fff; overflow: hidden; }
         #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; }
 
-        /* Contenedor del Organismo */
         #organismo-x {
             position: fixed;
             bottom: 50px;
@@ -67,20 +66,12 @@
             50% { transform: scale(1.2); filter: drop-shadow(0 0 15px red); }
         }
 
-        /* ESTÉTICA DE MIEL (AGRUPACIÓN) */
-        .cluster-organico {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        .cluster-organico { display: flex; align-items: center; justify-content: center; }
 
         .gota-miel {
-            background: rgba(255, 180, 0, 0.75); /* Ámbar denso */
-            /* Bordes suaves y asimétricos */
+            background: rgba(255, 180, 0, 0.75);
             border-radius: 45% 55% 50% 50% / 55% 50% 50% 45%; 
-            box-shadow: 
-                inset 0 0 12px rgba(255, 255, 255, 0.5),
-                0 4px 10px rgba(0, 0, 0, 0.15);
+            box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.5), 0 4px 10px rgba(0, 0, 0, 0.15);
             backdrop-filter: blur(3px);
             border: 1.5px solid rgba(218, 165, 32, 0.8);
             display: flex;
@@ -89,13 +80,7 @@
             transition: all 0.3s ease;
         }
 
-        .emoji-lider {
-            font-size: 24px;
-            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.15));
-            user-select: none;
-        }
-
-        .leaflet-control-attribution { display: none !important; }
+        .emoji-lider { font-size: 24px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.15)); user-select: none; }
     </style>
 </head>
 <body>
@@ -108,7 +93,7 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
@@ -119,26 +104,28 @@
         let map;
         const JITTER_FACTOR = 0.0001;
 
-        // GRUPO DE CLUSTERS CON LÓGICA DE MIEL
         const markers = L.markerClusterGroup({
             iconCreateFunction: function(cluster) {
                 const childMarkers = cluster.getAllChildMarkers();
                 const conteo = {};
                 
-                // Extraer y contar emojis para determinar el predominante
+                const primerEmojiMatch = childMarkers[0].options.icon.options.html.match(/>(.*?)</);
+                const emojiFundador = primerEmojiMatch ? primerEmojiMatch[1] : "X";
+
                 childMarkers.forEach(m => {
-                    const html = m.options.icon.options.html;
-                    const match = html.match(/>(.*?)</);
+                    const match = m.options.icon.options.html.match(/>(.*?)</);
                     if (match && match[1]) {
                         const emo = match[1];
                         conteo[emo] = (conteo[emo] || 0) + 1;
                     }
                 });
 
-                const predominante = Object.keys(conteo).reduce((a, b) => conteo[a] > conteo[b] ? a : b);
+                const predominante = Object.keys(conteo).reduce((a, b) => {
+                    if (conteo[a] === conteo[b]) return emojiFundador;
+                    return conteo[a] > conteo[b] ? a : b;
+                }, emojiFundador);
+
                 const count = cluster.getChildCount();
-                
-                // Tamaño dinámico pero contenido
                 const size = Math.min(44 + (count * 1.2), 75); 
 
                 return L.divIcon({ 
@@ -167,75 +154,15 @@
 
         async function init() {
             map = L.map('map', { zoomControl: false, center: [23.6, -102.5], zoom: 5 });
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
             map.addLayer(markers);
 
-            const { data: marcas, error: loadError } = await _supabase.from('marcas').select('*');
-            if (loadError) console.error("Error cargando:", loadError.message);
-            
+            const { data: marcas } = await _supabase.from('marcas').select('*');
             if (marcas) {
                 marcas.forEach(m => {
-                    const lta = m.lat_render || m.latitud || m.lat;
-                    const lng = m.lng_render || m.longitud || m.lng;
-                    if (lta && lng) añadirAlCluster(lta, lng, m.emoji);
-                });
-            }
-
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(p => {
-                    const lat = p.coords.latitude;
-                    const lng = p.coords.longitude;
-                    map.flyTo([lat, lng], 16, { duration: 2 });
-                    map.once('moveend', activarOrganismo);
-                }, () => setTimeout(activarOrganismo, 3000));
-            }
-
-            document.getElementById('organismo-x').addEventListener('click', async () => {
-                const emoji = prompt("¿Qué pictograma vas a estampar?");
-                if (emoji && emoji.trim() !== "") {
-                    const centro = map.getCenter();
-                    const coords = generarCoordenadasInmutables(centro.lat, centro.lng);
-                    
-                    const payload = { 
-                        lat_render: coords.lat_render, 
-                        lng_render: coords.lng_render, 
-                        lat_origen: coords.lat_origen, 
-                        lng_origen: coords.lng_origen,
-                        latitud: coords.lat_origen,   
-                        longitud: coords.lng_origen,  
-                        emoji: emoji 
-                    };
-
-                    const { error: insertError } = await _supabase.from('marcas').insert([payload]);
-                    if (insertError) {
-                        alert("Error al guardar: " + insertError.message);
-                    } else {
-                        añadirAlCluster(coords.lat_render, coords.lng_render, emoji);
-                    }
-                }
-            });
-        }
-
-        function activarOrganismo() {
-            const org = document.getElementById('organismo-x');
-            const halo = document.getElementById('halo-nebulosa');
-            if (halo) halo.style.display = 'none';
-            org.classList.replace('bloqueado', 'listo');
-        }
-
-        function añadirAlCluster(lat, lng, emoji) {
-            const newMarker = L.marker([lat, lng], {
-                icon: L.divIcon({
-                    className: 'sello',
-                    html: `<div style="font-size:35px; transform: translate(-50%, -50%);">${emoji}</div>`,
-                    iconSize: [0, 0]
-                })
-            });
-            markers.addLayer(newMarker);
-        }
-
-        window.onload = init;
-    </script>
-</body>
-</html>
+                    const lta = m.lat_render || m.latitud;
+                    const lng = m.lng
