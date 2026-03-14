@@ -1,41 +1,41 @@
 <script>
     function init() {
-        // --- CAJA 1: EL ESCENARIO ---
+        // 1. EL ESCENARIO
         const map = L.map('map', {
             zoomControl: false,
-            inertia: true,
-            rotate: false
-        }).setView([0, 0], 2);
+            center: [23.6, -102.5], // México por default
+            zoom: 5
+        });
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        // --- CAJA 2: LA DECISIÓN Y LA ACCIÓN ---
-        // El Gatillo: Al aplastar la pantalla
+        // 2. LA DECISIÓN Y LA ACCIÓN (Caja Única)
+        // Forzamos al mapa a escuchar el "aplastón"
         map.on('click', function(e) {
-            // La Decisión: El panel de pictogramas (KISS: Usamos el teclado del sistema)
-            const emoji = prompt("¿Qué pictograma quieres estampar aquí?");
+            console.log("Gatillo detectado en:", e.latlng); // Esto te confirma en consola que funciona
+            
+            // Invocamos el panel nativo
+            const emoji = prompt("ESCRIBE TU EMOJI AQUÍ:");
 
-            if (emoji) {
-                // La Acción: Estampado inmediato
+            if (emoji && emoji.trim() !== "") {
+                // El Estampado
                 L.marker(e.latlng, {
                     icon: L.divIcon({
-                        className: 'emoji-marker',
-                        html: `<div style="font-size:35px; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));">${emoji}</div>`,
-                        iconSize: [40, 40],
-                        iconAnchor: [20, 20]
+                        className: 'sello',
+                        html: `<div style="font-size:40px; margin-top:-20px; margin-left:-10px;">${emoji}</div>`,
+                        iconSize: [0, 0]
                     })
                 }).addTo(map);
-                // Misión cumplida.
+                alert("Pictograma estampado."); 
             }
         });
 
-        // Ubicación inicial
+        // GPS
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition((pos) => {
                 map.setView([pos.coords.latitude, pos.coords.longitude], 16);
-            }, null, { enableHighAccuracy: true });
+            });
         }
     }
-
     window.onload = init;
 </script>
