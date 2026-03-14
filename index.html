@@ -3,87 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LA X - NEBULOSA</title>
+    <title>LA X - CONSOLA</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
         #map { height: 100vh; width: 100vw; position: absolute; z-index: 1; }
 
-        /* Contenedor del Organismo */
+        /* EL ORGANISMO X */
         #organismo-x {
-            position: fixed;
-            bottom: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100px;
-            height: 100px;
-            z-index: 999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
+            width: 100px; height: 100px; z-index: 999;
+            display: flex; align-items: center; justify-content: center;
             transition: opacity 0.5s ease;
         }
-
-        /* ESTADO BLOQUEADO: La X no responde */
-        #organismo-x.bloqueado {
-            pointer-events: none;
-            opacity: 0.3;
-        }
-
-        /* ESTADO LISTO: La X brilla y late */
-        #organismo-x.listo {
-            pointer-events: auto;
-            opacity: 1;
-        }
-
-        /* LA NEBULOSA (Órbita de carga) */
-        #halo-nebulosa {
-            position: absolute;
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            border: 2px solid transparent;
-            border-top: 3px solid #ff0000; /* Arco de luz */
-            filter: blur(1px);
-            animation: girar-nebulosa 0.8s linear infinite;
-        }
-
-        @keyframes girar-nebulosa {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        #organismo-x.bloqueado { pointer-events: none; opacity: 0.3; }
+        #organismo-x.listo { pointer-events: auto; opacity: 1; cursor: pointer; }
 
         /* LA X PRIMORDIAL */
-        .la-x-primordial {
-            position: relative;
-            width: 50px;
-            height: 50px;
-        }
-
-        .la-x-primordial::before,
-        .la-x-primordial::after {
-            content: '';
-            position: absolute;
-            background: #ff0000;
-            border-radius: 2px;
+        .la-x-primordial { position: relative; width: 50px; height: 50px; }
+        .la-x-primordial::before, .la-x-primordial::after {
+            content: ''; position: absolute; background: #ff0000; border-radius: 2px;
             box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
         }
-
         .la-x-primordial::before { top: 0; left: 22px; width: 6px; height: 50px; transform: rotate(45deg); }
         .la-x-primordial::after { top: 22px; left: 0; width: 50px; height: 6px; transform: rotate(45deg); }
+        .listo .la-x-primordial { animation: respirar-x 3s ease-in-out infinite; }
 
-        /* Animación de Respiración (Solo cuando esté listo) */
-        .listo .la-x-primordial {
-            animation: respirar-x 3s ease-in-out infinite;
+        /* LA CONSOLA (EL ELEVADOR) */
+        #consola {
+            position: fixed; bottom: -100%; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95); z-index: 1000;
+            transition: bottom 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            display: flex; flex-direction: column;
         }
+        #consola.abierta { bottom: 0; }
 
+        /* Cabecera de Consola */
+        .consola-header { padding: 20px; text-align: right; }
+        .btn-cerrar { color: #ff0000; font-size: 30px; cursor: pointer; padding: 10px; }
+
+        /* Grilla de Emojis */
+        .emoji-grid {
+            flex: 1; display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 20px; padding: 20px; overflow-y: auto; align-content: start;
+        }
+        .emoji-item {
+            font-size: 45px; text-align: center; cursor: pointer;
+            transition: transform 0.2s; -webkit-tap-highlight-color: transparent;
+        }
+        .emoji-item:active { transform: scale(1.3); }
+
+        /* Navegación Inferior */
+        .consola-nav {
+            height: 70px; border-top: 1px solid #333;
+            display: flex; justify-content: space-around; align-items: center; background: #111;
+        }
+        .nav-tab { color: #666; font-size: 20px; cursor: pointer; }
+        .nav-tab.active { color: #ff0000; }
+
+        /* Animaciones */
         @keyframes respirar-x {
-            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 5px red); }
-            50% { transform: scale(1.2); filter: drop-shadow(0 0 15px red); }
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
         }
 
-        .leaflet-control-attribution { display: none !important; }
-        .leaflet-container { background: #000 !important; }
+        #halo-nebulosa {
+            position: absolute; width: 70px; height: 70px; border-radius: 50%;
+            border: 2px solid transparent; border-top: 3px solid #ff0000;
+            animation: girar-nebulosa 0.8s linear infinite;
+        }
+        @keyframes girar-nebulosa { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -95,6 +84,20 @@
         <div class="la-x-primordial"></div>
     </div>
 
+    <div id="consola">
+        <div class="consola-header">
+            <span class="btn-cerrar" onclick="cerrarConsola()">✕</span>
+        </div>
+        <div class="emoji-grid" id="grid-emojis">
+            </div>
+        <div class="consola-nav">
+            <div class="nav-tab active">🌿</div>
+            <div class="nav-tab">⚠️</div>
+            <div class="nav-tab">📍</div>
+            <div class="nav-tab">👤</div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -104,52 +107,56 @@
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let map;
+        const EMOJIS_NATURALEZA = ['🦌', '🌵', '🔥', '🐾', '🦅', '☀️', '🌑', '🌲', '🏔️', '💧', '🐍', '🦂'];
 
         async function init() {
             map = L.map('map', { zoomControl: false, center: [23.6, -102.5], zoom: 5 });
-
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-            // Cargar marcas
+            // Cargar marcas de Supabase
             const { data: marcas } = await _supabase.from('marcas').select('*');
-            if (marcas) {
-                marcas.forEach(m => estamparEnMapa(m.latitud, m.longitud, m.emoji));
-            }
+            if (marcas) marcas.forEach(m => estamparEnMapa(m.latitud, m.longitud, m.emoji));
 
-            // Lógica de Localización y Activación
+            // GPS y Activación
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(p => {
-                    const lat = p.coords.latitude;
-                    const lng = p.coords.longitude;
-
-                    // Volar a la ubicación
-                    map.flyTo([lat, lng], 16, { duration: 2 });
-
-                    // Activar al terminar el movimiento
-                    map.once('moveend', () => {
-                        activarOrganismo();
-                    });
-                }, () => {
-                    // Si falla el GPS o lo niegan, activamos tras 5s en la vista actual
-                    setTimeout(activarOrganismo, 5000);
-                });
+                    map.flyTo([p.coords.latitude, p.coords.longitude], 16, { duration: 2 });
+                    map.once('moveend', activarOrganismo);
+                }, () => setTimeout(activarOrganismo, 5000));
             }
 
-            // Acción del Sello
-            document.getElementById('organismo-x').addEventListener('click', async () => {
-                const emoji = prompt("¿Qué pictograma vas a estampar?");
-                if (emoji && emoji.trim() !== "") {
-                    const centro = map.getCenter();
-                    estamparEnMapa(centro.lat, centro.lng, emoji);
-                    await _supabase.from('marcas').insert([{ latitud: centro.lat, longitud: centro.lng, emoji: emoji }]);
-                }
+            // Inyectar Emojis en la grilla
+            const grid = document.getElementById('grid-emojis');
+            EMOJIS_NATURALEZA.forEach(emoji => {
+                const div = document.createElement('div');
+                div.className = 'emoji-item';
+                div.innerText = emoji;
+                div.onclick = () => seleccionarEmoji(emoji);
+                grid.appendChild(div);
             });
+
+            // Abrir Consola
+            document.getElementById('organismo-x').addEventListener('click', () => {
+                document.getElementById('consola').classList.add('abierta');
+            });
+        }
+
+        function cerrarConsola() {
+            document.getElementById('consola').classList.remove('abierta');
+        }
+
+        async function seleccionarEmoji(emoji) {
+            const centro = map.getCenter();
+            cerrarConsola();
+            
+            // Estampar y Guardar
+            estamparEnMapa(centro.lat, centro.lng, emoji);
+            await _supabase.from('marcas').insert([{ latitud: centro.lat, longitud: centro.lng, emoji: emoji }]);
         }
 
         function activarOrganismo() {
             const org = document.getElementById('organismo-x');
             const halo = document.getElementById('halo-nebulosa');
-            
             if (halo) halo.style.display = 'none';
             org.classList.replace('bloqueado', 'listo');
         }
@@ -158,7 +165,7 @@
             L.marker([lat, lng], {
                 icon: L.divIcon({
                     className: 'sello',
-                    html: `<div style="font-size:40px; transform: translate(-50%, -50%); text-align:center;">${emoji}</div>`,
+                    html: `<div style="font-size:40px; transform: translate(-50%, -50%);">${emoji}</div>`,
                     iconSize: [0, 0]
                 })
             }).addTo(map);
