@@ -7,18 +7,18 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=TU_API_KEY_AQUI"></script>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #e5e3df; }
         #map { height: 100vh; width: 100%; position: absolute; top: 0; left: 0; }
         #emoji-panel {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4); max-width: 90%; max-height: 250px;
-            overflow-y: auto; z-index: 1000; border: 1px solid #ccc;
+            background: rgba(255, 255, 255, 0.98); padding: 15px; border-radius: 12px;
+            box-shadow: 0 4px 25px rgba(0,0,0,0.5); max-width: 90%; max-height: 250px;
+            overflow-y: auto; z-index: 1000; border: 1px solid #bbb;
         }
-        .emoji-category { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .category-title { font-weight: bold; font-size: 14px; margin-bottom: 5px; display: block; color: #333; }
-        .emoji-item { cursor: pointer; font-size: 24px; padding: 8px; display: inline-block; transition: transform 0.1s; }
-        .emoji-item:hover { transform: scale(1.3); }
+        .emoji-category { margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        .category-title { font-weight: bold; font-size: 13px; margin-bottom: 6px; display: block; color: #555; text-transform: uppercase; }
+        .emoji-item { cursor: pointer; font-size: 26px; padding: 6px; display: inline-block; transition: transform 0.1s; user-select: none; }
+        .emoji-item:hover { transform: scale(1.3); background: #f0f0f0; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -27,11 +27,6 @@
 <div id="emoji-panel"></div>
 
 <script>
-// Credenciales de Supabase (RELLENA ESTO)
-const supabaseUrl = 'https://tu-proyecto.supabase.co';
-const supabaseKey = 'tu-anon-key';
-const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
 const EMOJI_CATS = [
     { icon: '⭐', label: 'Top', emojis: ['🔥','⚠️','📍','🐾','🦌','💧','🏠','🚨','✅','❌','🆘'] },
     { icon: '😀', label: 'Caras', emojis: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾'] },
@@ -39,10 +34,10 @@ const EMOJI_CATS = [
     { icon: '🐶', label: 'Animales', emojis: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🦅','🦆','🦢','🦉','🦚','🦜','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🦟','🦗','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍','🦧','🦣','🐘','🦛','🦏','🐪','🐫','🦒','🦘','🦬','🐃','🐂','🐄','🐎','🐖','🐏','🐑','🦙','🐐','🦌','🐕','🐩','🦮','🐈','🐓','🦃','🦤','🦩','🦢','🐇','🦝','🦨','🦡','🦫','🦦','🦥','🐁','🐀','🐿️','🦔'] },
     { icon: '🌵', label: 'Naturaleza', emojis: ['🌵','🎄','🌲','🌳','🌴','🪵','🌱','🌿','☘️','🍀','🎍','🪴','🎋','🍃','🍂','🍁','🪺','🪹','🍄','🌾','💐','🌷','🌹','🥀','🌺','🌸','🌼','🌻','🌞','🌝','🌛','🌜','🌚','🌕','🌖','🌗','🌘','🌑','🌒','🌓','🌔','🌙','🌟','⭐','🌠','🌌','☁️','⛅','🌤️','🌥️','🌦️','🌧️','⛈️','🌩️','🌨️','❄️','☃️','⛄','🌬️','💨','🌀','🌈','🌂','☂️','☔','⛱️','⚡','🔥','💧','🌊','🫧'] },
     { icon: '🍕', label: 'Comida', emojis: ['🍎','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥑','🥝','🍅','🫒','🍆','🥔','🥕','🌽','🌶️','🫑','🥦','🧄','🧅','🥜','🫘','🍞','🥐','🥖','🫓','🥨','🧀','🥚','🍳','🧈','🥞',' waffle','🥓','🥩','🍗','🍖','🦴','🌭','🍔','🍟','🍕','🫔','🌮','🌯','🥙','🧆','🍿','🧂','🥫','🍱','🍘','🍙','🍚','🍛','🍜','🍝','🍠','🦀','🦞','🦐','🍣','🍤','🥟','🦪','🍦','🍧','🍨','🍩','🍪','🎂','🍰','🧁','🥧','🍫','🍬','🍭','🍮','🍯','🍼','🥛','☕','🫖','🍵','🧃','🥤','🧋','🍶','🍺','🍻','🥂','🍷','🥃','🍸','🍹','🧉','🍾'] },
-    { icon: '🚗', label: 'Viaje', emojis: ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🏍️','🛵','🚲','🛴','🛹','🛼','🚏','🛣️','🛤️','⛽','🚧','🚦','🚥','🛑','⚓','🛶','⛵','🚤','🛥️','🛳️','⛴️','🚢','✈️','🛩️','🛫','🛬','🛰️','🚀','🛸','🚁','🛺','🚂','🚃','🚄','🚅','🚆','🚇','🚈','🚉','🚊','🚝','🚞','🚋'] },
-    { icon: '⚽', label: 'Deporte', emojis: ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥅','⛳','🪁','🏹','🎣','🤿','🎿','🥌','🎯','🪃','🏋️','🤸','🤺','🏇','⛷️','🏂','🪂','🤼','🤽','🤾','🏌️','🧘','🛀','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖️','🏵️','🎗️','🎫','🎟️','🎪','🤹','🎭','🩰','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🪘','🎷','🎺','🎸','🪕','🎻','🎲','♟️','🎯',' bowling','🎮','🕹️'] },
-    { icon: '🏠', label: 'Lugares', emojis: ['🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏭','🏗️','🧱','🪨','🪵','🛖','🏘️','🏚️','🏰','🏯','🏟️','🗼','🗽','⛪','🕌','🛕','✡️','⛩️','🗾','🎑','🏞️','🌅','🌄','🌠','🎇','🎆','🌇','🌆','🏙️','🌃','🌌','🌉','🌁','🗺️','🧭','🏔️','⛰️','🌋','🗻','🏜️','🌵','🏕️','🏖️','🏝️','🏛️'] },
-    { icon: '💡', label: 'Objetos', emojis: ['💡','🔦','🕯️','🪔','🔋','🔌','🧯','🛢️','🔨','🪓','⛏️','⚒️','🛠️','🗡️','⚔️','🛡️','🔧','🪛','🔩','⚙️','🪚','🪜','🪝','💻','🖥️','📱','📲','📷','📸','📹','🎥','📞','☎️','📟','📠','📺','📻','🧭','📡','💊','🩺','🩻','🩹','🩼',' thermometer','🧪','🧫','🧬','🔬','🔭','⚖️','💎','💰','💳','⏰','⌚','⏱️','⏲️','🕰️','⌛','⏳','🔑','🗝️','📦','📧','📨','📮','📜','📑','📁','📂','📅'] },
+    { icon: '🚗', label: 'Viaje', emojis: ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🏍️','🛵','🚲','🛴',' skateboard','🛼','🚏','🛣️','🛤️','⛽','🚧','🚦','🚥','🛑','⚓','🛶','⛵','🚤','🛥️','🛳️','⛴️','🚢','✈️','🛩️','🛫','🛬','🛰️','🚀','🛸','🚁','🛺','🚂','🚃','🚄','🚅','🚆','🚇','🚈','🚉','🚊','🚝','🚞','🚋'] },
+    { icon: '⚽', label: 'Deporte', emojis: ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓',' badminton','🏒','🥊','🥋','🎽',' skateboard','🛼','🛷','⛸️','🥅','⛳','🪁','🏹','Fishing','🤿','🎿','🥌','🎯','🪃','🏋️','🤸','🤺','🏇','⛷','🏂','🪂','🤼','🤽','🤾','🏌️','🧘','🛀','🧗','🚵','🚴','🏆','🥇','🥈','🥉','🏅','🎖️','🏵️','🎗️','🎫','🎟️','🎪','🤹','🎭','🩰','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🪘','🎷','🎺','🎸','🪕','🎻','🎲','➗','🎯','Bowling','🎮','🕹️'] },
+    { icon: '🏠', label: 'Lugares', emojis: ['🏠','🏡','🏢','🏣','🏤','🏥','🏦','🏨','🏩','🏪','🏫','🏭','🏗️','🧱','🪨','🪵','🛖','🏘️','🏚️','🏰','🏯','🏟️','🗼','自由','⛪','🕌','🛕','✡️','⛩️','🗾','🎑','🏞️','🌅','🌄','🌠','🎇','🎆','🌇','🌆','🏙️','🌃','🌌','🌉','🌁','🗺️','🧭','🏔️','⛰️','🌋','🗻','🏜️','🌵','🏕️','🏖️','🏝️','🏛️'] },
+    { icon: '💡', label: 'Objetos', emojis: ['💡','🔦','🕯️','🪔','🔋','🔌','🧯','🛢️','🔨','🪓','⛏️','⚒️','🛠️','🗡️','⚔️','🛡️','🔧','🪛','🔩','⚙️','🪚','梯子','🪝','💻','🖥️','📱','📲','📷','📸','📹','🎥','📞','☎️','📟','📠','📺','📻','🧭','📡','💊','🩺','🩻','🩹','🩼','🌡️','🧪','🧫','🧬','🔬','🔭','⚖️','💎','💰','💳','⏰','⌚','⏱️','⏲️','🕰️','⌛','⏳','🔑','🗝️','📦','📧','📨','📮','📜','📑','📁','📂','📅'] },
     { icon: '❤️', label: 'Signos', emojis: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','⚕️','♻️','⚜️','🔱','📛','🔰','⭕','✅','☑️','✔️','❌','❎','➕','➖','➗','✖️','🟰','♾️','💲','💱','‼️','⁉️','❓','❔','❕','❗','〰️','🔅','🔆','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔺','🔻','🔷','🔶','🔹','🔸','🔲','🔳','▪️','▫️','◾','◽','◼️','◻️'] },
     { icon: '🚩', label: 'Banderas', emojis: ['🇪🇨','🇲🇽','🇨🇴','🇦🇷','🇵🇪','🇻🇪','🇨🇱','🇬🇹','🇪🇸','🇨🇺','🇧🇴','🇩🇴','🇭🇳','🇵🇾','🇳🇮','🇸🇻','🇨🇷','🇵🇦','🇺🇾','🇵🇷','🇬🇶','🇺🇸','🇨🇦','🇬🇧','🇫🇷','🇩🇪','🇨🇳','🇷🇺','🇧🇷','🎌'] }
 ];
@@ -51,15 +46,11 @@ let map;
 let selectedEmoji = '📍';
 
 function initMap() {
-    // Configuración del mapa
     map = new google.maps.Map(document.getElementById("map"), {
-        center: { lat: 29.08919, lng: -110.96133 },
+        center: { lat: 29.089, lng: -110.961 },
         zoom: 13,
-        disableDefaultUI: false,
-        zoomControl: true,
     });
 
-    // Cargar Panel de Emojis
     const panel = document.getElementById('emoji-panel');
     EMOJI_CATS.forEach(cat => {
         const div = document.createElement('div');
@@ -73,30 +64,22 @@ function initMap() {
             const span = document.createElement('span');
             span.className = 'emoji-item';
             span.innerText = emoji;
-            span.onclick = () => {
-                selectedEmoji = emoji;
-                console.log("Seleccionado:", emoji);
-            };
+            span.onclick = () => { selectedEmoji = emoji; };
             div.appendChild(span);
         });
         panel.appendChild(div);
     });
 
-    // Evento Click en Mapa para poner marcador
-    map.addListener("click", (mapsMouseEvent) => {
-        const position = mapsMouseEvent.latLng;
+    map.addListener("click", (e) => {
         new google.maps.Marker({
-            position: position,
+            position: e.latLng,
             map: map,
             label: { text: selectedEmoji, fontSize: '24px' }
         });
-        // Aquí iría tu lógica de supabase.from('puntos').insert(...)
     });
 }
 
-// Inicializar cuando cargue la ventana
 window.onload = initMap;
 </script>
-
 </body>
 </html>
