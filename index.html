@@ -83,11 +83,11 @@
         </div>
         <div class="emoji-grid" id="grid-emojis"></div>
         <div class="consola-nav">
-            <div class="nav-tab active" onclick="cambiarCategoria('c1', this)">❤️</div>
-            <div class="nav-tab" onclick="cambiarCategoria('c2', this)">🌲</div>
-            <div class="nav-tab" onclick="cambiarCategoria('c3', this)">🧑‍⚕️</div>
-            <div class="nav-tab" onclick="cambiarCategoria('c4', this)">🚀</div>
-            <div class="nav-tab" onclick="cambiarCategoria('c5', this)">🇪🇨</div>
+            <div class="nav-tab active" onclick="cambiarCategoria('c1', this)">😀</div>
+            <div class="nav-tab" onclick="cambiarCategoria('c2', this)">🐻</div>
+            <div class="nav-tab" onclick="cambiarCategoria('c3', this)">⚽</div>
+            <div class="nav-tab" onclick="cambiarCategoria('c4', this)">💡</div>
+            <div class="nav-tab" onclick="cambiarCategoria('c5', this)">❤️</div>
         </div>
     </div>
 
@@ -101,68 +101,9 @@
 
         let map;
 
-        // Limpieza de seguridad: remueve duplicados de cualquier array
-        const purgar = (arr) => [...new Set(arr)];
-
         const BIBLIOTECA = {
-            "c1": purgar([
-                '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','💌','💋','🫂','💏','💑','👽','🛸','💀','☠️','👻','🤖','👾','👹','👺','🤡','🧟','🧙','🧛','🧜','🧚','🧞','👤','👥','🗣️','🧠','👀','👁️','🦷','👅','🫦','🦴','🦾','🦿','👣','🤲','👐','🙌','👏','🙏','🤝','👍','👎','👊','✊','🤛','🤜','🤞','🤟','🤘','👌','🤌','🤏','👈','👉','👆','👇','💪','🦵','👂','👃','👶','🧒','👦','👧','🧑','👨','👩','👱','🧔','👵','👴','👲','👳','🧕','👮','👷','🕵️','💂','🤴','👸','🤵','👰','🤰','🤱','👼','🕴️','💃','🕺','🧗','🏇','🧘','🚶','🏃','🙇','💁','🙅','🙆','🙋','🧏','🤷','🙎','🙍','💇','💆','🧖','🛀','🛌','😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','🫠','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','😋','😛','😜','🤪','😝','🤑','🤗','🫣','🤭','🥱','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','🫨','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','😵‍💫','🤯','🤠','🥳','😎','🤓','🧐','😕','🫤','😟','🙁','😮','😯','😲','😳','🥺','🥹','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','😤','😡','😠','🤬','😈','👿','🎃','😺','😸','😻','😼','😽','🙀','😿','😾'
-            ]),
-            "c2": purgar(['🌲','🌵','🌴','🌳','🍀','🍄','🌾','🌱','🌿','🍃','🎋','🌹','🌸','🌺','🌻','🌼','🌷','🪴','🌋','🏔️','⛰️','🌪️','☄️','☀️','🌑','🌕','🌙','🌤️','🌩️','🌦️','⛈️','🌧️','❄️','🌫️','🌊','💧','🔥','🐾',' deer','🐍','🦅','🦂','🦁','🦖','🦠','🐜','🐝','🪲','🐞','🦗','蛛','🕸️','🐢','🐊','🦈','🐬','🐳','🐅','🐘','🐎','🦒','🐄','🐏','🐖','🐐','🐕','🐈','🐓','🦆','🦜','🦢','🦩','🕊️','🐇','🦦','🦥','🦫','🦔','🐿️','🐨','🐼','🪵','🍂','🍁','🥀','☘️','🎄','🐚','🗻']),
-            "c3": purgar(['🧑‍⚕️','🧑‍🌾','🧑‍🔧','🧑‍🔬','👮','👷','🕵️','🤵','👩‍🚒','🧑‍✈️','💉','💊','🩹','🧬','🧪','🌡️','🩺','🏥','🚑','🧫','🔬','⚖️','🏹','🎣','🏇','🥊','🥋','🛹','🚴','🏋️','🏊','🚣','🧗','⛹️','🏌️','🎯','🏆','🏅','🎖️','🎭','🎨','🎬','🎤','🎧','🎹','🎸','🎺','🎻','📷','📸','📹','📱','💻','🔦','🛠️','🔧','🔨','⚒️','⛏️','🔩','⚙️','🧱','⛓️','🧰','🧲','🪜','🧼','🧽','🧯','🪠','🪣','🪚','👨‍🏭','👨‍💻','👩‍💻','🧑‍💻','👨‍💼','👩‍💼','🧑‍💼','👨‍⚖️','👩‍⚖️','🧑‍⚖️']),
-            "c4": purgar(['🚀','🛰️','🔭','📡','🛸','🌠','🌌','🌍','🌎','🌏','🌑','🌞','✈️','🚁','🚢','⛵','🚜','🚗','🚓','🚒','🚌','🚲','🛵','🏎️','🚥','🚧','🛑','🗺️','🏙️','🏟️','🏠','🏢','🏫','🛖','⛪','⛩️','⛲','🎡','🎢','🏖️','🧨','💣','🔫','⚔️','🛡️','🪓','🗝️','🔒','🔓','🔋','📟','🔌','🖨️','⌨️','🖱️','📀','🎥','🎞️','📽️','📺','🕯️','🏮','📦','📫','📪','📬','📮','📜','📄','🗞️','📊','📈','📉','🏷️','💎','💍','🪙','💰','💳']),
-            "c5": purgar(['🇪🇨','🇲🇽','🇺🇸','🇪🇸','🇨🇴','🇦🇷','🇨🇱','🇧🇷','🇮🇹','🇫🇷','🇬🇧','🇯🇵','🇨🇳','🇰🇷','🇷🇺','🏳️','🏴','🏁','🚩','🏴‍☠️','🏳️‍🌈','⚧️','🇺🇳','🇪🇺','🎌','⚠️','🚫','🆘','🔞','☣️','☢️','☯️','✡️','☪️','✝️','☸️','♾️','🆔','🈲','🉐','🈴','㊗️','㊙️','🔘','🔴','🟡','🟢','🔵','🟣','🟤','⚫','⚪','🟥','🟦','🟧','🟨','🟩','🟪','🟫','⬛','⬜','🇦🇺','🇨🇦','🇩🇪','🇮🇳','🇳🇬','🇸🇦','🇿🇦','🇹🇷','🇮🇩','🇻🇳','🇵🇭','🇹🇭','🇲🇾','🇵🇪','🇻🇪','🇧🇴','🇺🇾','🇵🇾','🇵🇷','🇨🇺','🇩🇴','🇨🇷','🇵🇦','🇸🇻','🇬🇹','🇭🇳','🇳🇮','🇮🇱','🇮🇶','🇮🇷','🇵🇰','🇪🇬','🇲🇦','🇦🇪','🇦🇩','🇦🇫','🇦🇬','🇦🇮','🇦🇲','🇦🇴','🇦🇶','🇦🇸','🇦🇹','🇦🇼','🇦🇽','🇦🇿','🇧🇦','🇧🇧','🇧🇩','🇧🇪','🇧🇫','🇧🇬','🇧🇭','🇧🇮','🇧🇯','🇧🇲','🇧🇳'])
-        };
-
-        async function init() {
-            map = L.map('map', { zoomControl: false, center: [-1.83, -78.18], zoom: 7 });
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-
-            const { data } = await _supabase.from('marcas').select('*');
-            if (data) data.forEach(m => estamparEnMapa(m.latitud, m.longitud, m.emoji));
-
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(p => {
-                    map.flyTo([p.coords.latitude, p.coords.longitude], 16);
-                    activarOrganismo();
-                }, activarOrganismo);
-            }
-
-            document.getElementById('organismo-x').onclick = () => {
-                document.getElementById('consola').classList.add('abierta');
-                cambiarCategoria('c1', document.querySelector('.nav-tab'));
-            };
-        }
-
-        function cambiarCategoria(cat, elemento) {
-            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            elemento.classList.add('active');
-            const grid = document.getElementById('grid-emojis');
-            grid.innerHTML = BIBLIOTECA[cat].map(e => `<div class="emoji-item" onclick="seleccionarEmoji('${e}')">${e}</div>`).join('');
-            grid.scrollTop = 0;
-        }
-
-        async function seleccionarEmoji(emoji) {
-            const centro = map.getCenter();
-            cerrarConsola();
-            estamparEnMapa(centro.lat, centro.lng, emoji);
-            await _supabase.from('marcas').insert([{ latitud: centro.lat, longitud: centro.lng, emoji: emoji }]);
-        }
-
-        function cerrarConsola() { document.getElementById('consola').classList.remove('abierta'); }
-        function activarOrganismo() { 
-            const halo = document.getElementById('halo-nebulosa');
-            if (halo) halo.style.display = 'none';
-            document.getElementById('organismo-x').classList.replace('bloqueado', 'listo');
-        }
-
-        function estamparEnMapa(lat, lng, emoji) {
-            L.marker([lat, lng], {
-                icon: L.divIcon({ className: 'sello', html: `<div style="font-size:45px; transform: translate(-50%, -50%); filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));">${emoji}</div>`, iconSize: [0, 0] })
-            }).addTo(map);
-        }
-
-        window.onload = init;
-    </script>
-</body>
-</html>
+            "c1": [
+                '😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','🫠','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','😋','😛','😜','🤪','😝','🤑','🤗','🫣','🤭','🥱','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','🫨','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','😵‍💫','🤯','🤠','🥳','😎','🤓','🧐','😕','🫤','😟','🙁','😮','😯','😲','😳','🥺','🥹','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','😤','😡','😠','🤬','😈','👿','👹','👺','🤡','💩','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😻','😼','😽','🙀','😿','😾','🤲','👐','🙌','👏','🙏','🤝','👍','👎','👊','✊','🤛','🤜','🤞','🤟','🤘','👌','🤌','🤏','👈','👉','👆','👇','💪','🦵','👂','👃','🧠','🦷','👅','🫦','👶','🧒','👦','👧','🧑','👨','👩','👱','🧔','👵','👴','👲','👳','🧕','👮','👷','🕵️','💂','🤴','👸','🤵','👰','🤰','🤱','👼','🎅','🤶','🧙','🧚','🧛','🧜','🧞','🧟','🕴️','💃','🕺','🚶','🏃','🧘'
+            ],
+            "c2": [
+                '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐻‍❄️','🐨','🐯','🦁','🐮','🐷','🐽','🐸','🐵','🐒','🦍','🦧','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦢','🦉','🦤','🪶','🦩','
