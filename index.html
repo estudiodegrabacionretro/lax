@@ -16,7 +16,6 @@
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         #map { position: absolute; inset: 0; z-index: 1; background: #111; }
 
-        /* Botón LA X */
         #btn-x {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
             width: 75px; height: 75px; background: #007bff; color: white;
@@ -27,21 +26,20 @@
         }
         #btn-x:active { transform: translateX(-50%) scale(0.9); }
 
-        /* Panel Deslizable estilo WhatsApp */
         #emoji-container {
-            position: absolute; bottom: -100%; left: 0; width: 100%; height: 70%;
+            position: absolute; bottom: -100%; left: 0; width: 100%; height: 75%;
             background: #1c1c1e; z-index: 20; transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             border-radius: 20px 20px 0 0; display: flex; flex-direction: column;
             color: white; box-shadow: 0 -5px 25px rgba(0,0,0,0.8);
         }
         #emoji-container.active { bottom: 0; }
 
-        .handle { width: 40px; height: 5px; background: #3a3a3c; border-radius: 10px; margin: 10px auto; flex-shrink: 0; }
+        .handle { width: 40px; height: 5px; background: #3a3a3c; border-radius: 10px; margin: 12px auto; flex-shrink: 0; }
         
         #search-box { padding: 5px 15px 10px; }
         #emoji-search {
             width: 100%; padding: 10px; border-radius: 10px; border: none;
-            background: #2c2c2e; color: white; font-size: 16px; box-sizing: border-box;
+            background: #2c2c2e; color: white; font-size: 16px; box-sizing: border-box; outline: none;
         }
 
         #tabs {
@@ -50,7 +48,7 @@
         }
         #tabs::-webkit-scrollbar { display: none; }
         .tab {
-            padding: 6px 14px; border-radius: 15px; background: #2c2c2e;
+            padding: 8px 14px; border-radius: 15px; background: #2c2c2e;
             white-space: nowrap; cursor: pointer; font-size: 14px; color: #8e8e93;
         }
         .tab.active { background: #007bff; color: white; }
@@ -86,22 +84,8 @@
         const _S = supabase.createClient(_U, _K);
 
         let map, userPos, clusterGroup, activeIds = new Set();
-        let currentTab = 'Frecuentes';
+        let currentTab = '⭐ Favoritos';
 
         const EMOJI_CATS = [
-            { icon: '⭐', label: 'Frecuentes', emojis: ['🔥','⚠️','📍','🐾','🦌','💧','🏠','🚨','✅','🆘'] },
-            { icon: '🚩', label: 'Banderas', emojis: ['🇲🇽','🇬🇹','🇸🇻','🇭🇳','🇳🇮','🇨🇷','🇵🇦','🇨🇺','🇩🇴','🇵🇷','🇨🇴','🇮T','🇻🇪','🇪🇨','🇵🇪','🇧🇴','🇵🇾','🇨🇱','🇦🇷','🇺🇾','🇧🇷','🇪🇸','🇺🇸'] },
-            { icon: '😀', label: 'Caras', emojis: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','🥰','😍','🤩','😘','😋','😛','😜','😎','🥳','🥺','😭','😡','🤮','😴'] },
-            { icon: '🐶', label: 'Animales', emojis: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🐤','🐣','🐥','🦆','🦢','🦉','🐢','🐍','🦎','🐙','🦑','🦐','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐆','🦓','🦍','🐘','🦛','🦏','🐪','🦒','🦘','🐃','🐎','🐖','🐏','🐐','🦌','🐕','🐈','🐓','🦃','🦨','🦡','🦦','🦫','🦔','🐁','🐿️','🐾','🐉'] }
-        ];
-
-        function init() {
-            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([23, -102], 5);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-            
-            clusterGroup = L.markerClusterGroup({ showCoverageOnHover: false });
-            map.addLayer(clusterGroup);
-
-            if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(p => {
-                    userPos = { lat
+            { icon: '⭐', label: 'Favoritos', emojis: ['🔥','⚠️','📍','🐾','🚨','🆘','✅','❌','🛑','🚧','⚡','💎','🛠️','🛡️','🦌'] },
+            { icon: '📍', label: 'Lugares',
