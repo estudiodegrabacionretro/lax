@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Colmena de Expresión</title>
+    <title>Una equis marcará el lugar</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <style>
@@ -35,6 +35,7 @@
             display: flex; flex-direction: column;
         }
         #consola.abierta { bottom: 0; }
+
         .consola-header { padding: 20px 25px 10px 25px; display: flex; justify-content: flex-end; }
         .btn-cerrar { color: #ff0000; font-size: 35px; cursor: pointer; opacity: 0.8; line-height: 1; }
 
@@ -82,13 +83,16 @@
 <body>
 
     <div id="map"></div>
+    
     <div id="organismo-x" class="bloqueado">
         <div id="halo-nebulosa"></div>
         <div class="la-x-primordial"></div>
     </div>
 
     <div id="consola">
-        <div class="consola-header"><span class="btn-cerrar" onclick="cerrarConsola()">✕</span></div>
+        <div class="consola-header">
+            <span class="btn-cerrar" onclick="cerrarConsola()">✕</span>
+        </div>
         <div class="emoji-grid" id="grid-emojis"></div>
         <div class="consola-nav">
             <div class="nav-tab active" onclick="cambiarCategoria('c1', this)">😀</div>
@@ -105,12 +109,14 @@
 
     <script>
         const SUPABASE_URL = "https://echdpjhzjsaqtvdrkgaj.supabase.co";
-        const SUPABASE_KEY = "TU_KEY_REAL"; // Usa la que tienes
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjaGRwamh6anNhcXR2ZHJrZ2FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTA2NTYsImV4cCI6MjA4ODk4NjY1Nn0.8_E_jXsoA8JSgQ-PSNRNc-vqePqFeEDWHiy5YFgc8oo";
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let map, clusterColmena, userPos = null;
+        let map;
+        let clusterColmena;
+        let userPos = null;
 
-        const BIBLIOTECA = { /* Tu biblioteca completa aquí... */ };
-
-        async function init() {
-            map
+        const BIBLIOTECA = {
+            "c1": [
+                '😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','🫠','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','😋','😛','😜','🤪','😝','🤑','🤗','🫣','🤭','🥱','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','🫨','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','😵‍💫','🤯','🤠','🥳','😎','🤓','🧐','😕','🫤','😟','🙁','😮','😯','😲','😳','🥺','🥹','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','😤','😡','😠','🤬','😈','👿','👹','👺','🤡','💩','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😻','😼','😽','🙀','😿','😾','🤲','👐','🙌','👏','🙏','🤝','👍','👎','👊','✊','🤛','🤜','🤞','🤟','🤘','👌','🤌','🤏','👈','👉','👆','👇','💪','🦵','👂','👃','🧠','🦷','👅','🫦','👶','🧒','👦','👧','🧑','👨','👩','👱','🧔','👵','👴','👲','👳','🧕','👮','👷','🕵️','💂','🤴','👸','🤵','👰','🤰','🤱','👼','🎅','🤶','🧙','🧚','🧛','🧜','🧞','🧟','🕴️','💃','🕺','🚶','🏃','🧘'
+            ],
